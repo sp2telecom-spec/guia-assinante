@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Canal do Assinante - EPG Real</title>
+<title>Canal do Assinante - EPGshare01 Real</title>
 <style>
     :root {
         --bg-primary: #0b0f1a;
@@ -92,6 +92,13 @@
         animation: transicaoSlide 0.5s ease-in-out;
     }
 
+    .channel-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+
     .channel-name {
         font-size: 22px;
         font-weight: bold;
@@ -141,6 +148,14 @@
         font-weight: bold;
     }
 
+    .loading-msg {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 60px;
+        font-size: 22px;
+        color: var(--text-muted);
+    }
+
     @keyframes transicaoSlide {
         from { opacity: 0; transform: translateY(12px); }
         to { opacity: 1; transform: translateY(0); }
@@ -153,52 +168,43 @@
     <header>
         <h1>📺 CANAL DO ASSINANTE</h1>
         <div class="status-panel">
-            <div class="counter-badge" id="page-info">Aguardando...</div>
+            <div class="counter-badge" id="page-info">Sincronizando...</div>
             <div class="time-badge" id="live-clock">00:00:00</div>
         </div>
     </header>
 
-    <main class="epg-grid" id="epg-container"></main>
+    <main class="epg-grid" id="epg-container">
+        <div class="loading-msg" id="msg-status">Baixando e processando dados do epg_ripper_BR2...</div>
+    </main>
 </div>
 
 <script>
-// Lista de canais oficial
-const listaCanaisMestre = [
-    { nome: "A&E", id: "530053" }, { nome: "AMC", id: "542749" }, { nome: "ANIMAL PLANET", id: "530055" },
-    { nome: "ARTE 1", id: "542750" }, { nome: "AXN", id: "530056" }, { nome: "BABY TV", id: "542751" },
-    { nome: "BAND", id: "523326" }, { nome: "BAND NEWS", id: "530058" }, { nome: "BAND SPORTS", id: "530059" },
-    { nome: "BBC WORLD NEWS", id: "530060" }, { nome: "BIS", id: "530061" }, { nome: "BLOOMBERG", id: "530062" },
-    { nome: "CANAL 21", id: "530063" }, { nome: "CANAL BRASIL", id: "530064" }, { nome: "CANAL DO BOI", id: "542752" },
-    { nome: "CANAL RURAL", id: "530065" }, { nome: "CARTOON NETWORK", id: "530066" }, { nome: "CINEMAX", id: "530069" },
-    { nome: "CNN INTERNATIONAL", id: "530071" }, { nome: "COMBATE", id: "530072" }, { nome: "COMEDY CENTRAL", id: "530073" },
-    { nome: "DEUTSCHE WELLE", id: "530074" }, { nome: "DISCOVERY CHANNEL", id: "530075" }, { nome: "DISCOVERY HD THEATER", id: "530076" },
-    { nome: "DISCOVERY HOME & HEALTH", id: "530077" }, { nome: "DISCOVERY KIDS", id: "530078" }, { nome: "DISCOVERY SCIENCE", id: "530079" },
-    { nome: "DISCOVERY TURBO", id: "530080" }, { nome: "DISCOVERY WORLD", id: "530081" }, { nome: "E! ENTERTAINMENT", id: "530082" },
-    { nome: "ESPN 2", id: "530083" }, { nome: "ESPN 3", id: "530084" }, { nome: "ESPN 4", id: "530085" },
-    { nome: "ESPN 5", id: "542753" }, { nome: "ESPN", id: "530086" }, { nome: "EUROCHANNEL", id: "542754" },
-    { nome: "FILM & ARTS", id: "542755" }, { nome: "FUTURA", id: "530087" }, { nome: "GLOBO", id: "523321" },
-    { nome: "GLOBO NEWS", id: "530088" }, { nome: "GLOOB", id: "530089" }, { nome: "GNT", id: "530090" },
-    { nome: "HBO 2", id: "530091" }, { nome: "HBO", id: "530092" }, { nome: "HBO FAMILY", id: "530093" },
-    { nome: "HBO PLUS", id: "530094" }, { nome: "HBO SIGNATURE", id: "530095" }, { nome: "HISTORY CHANNEL", id: "530097" },
-    { nome: "LIFETIME", id: "530098" }, { nome: "MEGAPIX", id: "530099" }, { nome: "MTV", id: "530100" },
-    { nome: "MULTISHOW", id: "530101" }, { nome: "NICKELODEON", id: "530102" }, { nome: "NICK JR", id: "530103" },
-    { nome: "OFF HD", id: "530104" }, { nome: "PARAMOUNT CHANNEL", id: "530105" }, { nome: "PREMIERE CLUBES", id: "530106" },
-    { nome: "RAI INTERNATIONAL", id: "530107" }, { nome: "RECORD NEWS", id: "530108" }, { nome: "RECORD TV", id: "523325" },
-    { nome: "REDE BOA VONTADE", id: "542756" }, { nome: "REDE TV", id: "523324" }, { nome: "REDE VIDA", id: "530109" },
-    { nome: "SBT", id: "523323" }, { nome: "SIC INTERNATIONAL", id: "530110" }, { nome: "SONY", id: "530111" },
-    { nome: "SPACE", id: "530112" }, { nome: "SPORTV 2", id: "530114" }, { nome: "SPORTV 3", id: "530115" },
-    { nome: "SPORTV", id: "530116" }, { nome: "STUDIO UNIVERSAL", id: "530117" }, { nome: "TBS", id: "530118" },
-    { nome: "TCM TURNER CLASSIC", id: "530119" }, { nome: "TELECINE ACTION", id: "530120" }, { nome: "TELECINE CULT", id: "530121" },
-    { nome: "TELECINE FUN", id: "530122" }, { nome: "TELECINE PIPOCA", id: "530123" }, { nome: "TELECINE PREMIUM", id: "530124" },
-    { nome: "TELECINE TOUCH", id: "530125" }, { nome: "TLC", id: "530126" }, { nome: "TNT", id: "530127" },
-    { nome: "TNT SÉRIES", id: "530128" }, { nome: "TOONCAST", id: "530129" }, { nome: "TRAVEL BOX BRAZIL", id: "530130" },
-    { nome: "TV5 MONDE", id: "530131" }, { nome: "TV APARECIDA", id: "530132" }, { nome: "TV BRASIL", id: "530133" },
-    { nome: "TV CULTURA", id: "523322" }, { nome: "TV ESCOLA", id: "530134" }, { nome: "TV ESPANHA", id: "530135" },
-    { nome: "TV GAZETA", id: "530136" }, { nome: "TV JUSTIÇA", id: "530137" }, { nome: "TV SENADO", id: "530138" },
-    { nome: "UNIVERSAL CHANNEL", id: "530139" }, { nome: "VIVA", id: "530140" }, { nome: "WARNER CHANNEL", id: "530141" },
-    { nome: "WOOHOO", id: "530142" }
+// Configuração de Fontes e Caminhos Remotos
+const xmlUrlReal = "https://epgshare01.online/epgshare01/epg_ripper_BR2.xml";
+const proxyUrl = `https://allorigins.win{encodeURIComponent(xmlUrlReal)}`;
+
+// Lista de IDs exatos contidos no arquivo epg_ripper_BR2.xml fornecido
+const meusCanaisLista = [
+    "A&E.br", "AMC.br", "Animal.Planet.br", "Arte.1.br", "AXN.br", "Baby.TV.br", "Band.br", "Band.News.br", 
+    "Band.Sports.br", "BBC.World.News.br", "Bis.br", "Bloomberg.br", "Canal.21.br", "Canal.Brasil.br", 
+    "Canal.do.Boi.br", "Canal.Rural.br", "Cartoon.Network.br", "Cinemax.br", "CNN.International.br", 
+    "Combate.br", "Comedy.Central.br", "Deutsche.Welle.br", "Discovery.Channel.br", "Discovery.HD.Theater.br", 
+    "Discovery.Home.&amp;.Health.br", "Discovery.Kids.br", "Discovery.Science.br", "Discovery.Turbo.br", 
+    "Discovery.World.br", "E!.Entertainment.Television.br", "ESPN.2.br", "ESPN.3.br", "ESPN.4.br", 
+    "ESPN.5.br", "ESPN.br", "Eurochannel.br", "Film.&amp;.Arts.br", "Futura.br", "Globo.br", "Globo.News.br", 
+    "Gloob.br", "GNT.br", "HBO.2.br", "HBO.br", "HBO.Family.br", "HBO.Plus.br", "HBO.Signature.br", 
+    "History.Channel.br", "Lifetime.br", "Megapix.br", "MTV.br", "Multishow.br", "Nickelodeon.br", 
+    "Nick.Jr..br", "OFF.HD.br", "Paramount.Channel.br", "Premiere.Clubes.br", "RAI.International.br", 
+    "Record.News.br", "Record.TV.br", "Rede.Boa.Vontade.br", "Rede.TV.br", "Rede.Vida.br", "SBT.br", 
+    "SIC.International.br", "Sony.br", "SPACE.br", "SporTV.2.br", "SporTV.3.br", "SporTV.br", 
+    "Studio.Universal.br", "TBS.br", "TCM.-.Turner.Classic.br", "Telecine.Action.br", "Telecine.Cult.br", 
+    "Telecine.Fun.br", "Telecine.Pipoca.br", "Telecine.Premium.br", "Telecine.Touch.br", "TLC.br", 
+    "TNT.br", "TNT.S\u00C3\u00A9ries.br", "Tooncast.br", "Travel.Box.Brazil.br", "TV5.Monde.br", "TV.Aparecida.(aberta).br", 
+    "TV.Brasil.br", "TV.Cultura.br", "TV.Escola.br", "TV.Espanha.br", "TV.Gazeta.br", "TV.Justi\u00C3\u00A7a.br", 
+    "TV.Senado.br", "Universal.Channel.br", "Viva.br", "Warner.Channel.br", "Woohoo.br"
 ];
 
+let listaProgramasMestre = [];
 let ponteiroAtual = 0;
 const itensPorPagina = 4;
 
@@ -207,57 +213,96 @@ function atualizarRelogio() {
     document.getElementById("live-clock").textContent = agora.toLocaleTimeString('pt-BR');
 }
 
-function formatarHora(timestamp) {
-    if (!timestamp) return "--:--";
-    return new Date(timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+function parseXMLTVDate(dateStr) {
+    if (!dateStr) return null;
+    let y = dateStr.slice(0, 4);
+    let m = dateStr.slice(4, 6) - 1;
+    let d = dateStr.slice(6, 8);
+    let h = dateStr.slice(8, 10);
+    let min = dateStr.slice(10, 12);
+    let s = dateStr.slice(12, 14) || "00";
+    return new Date(Date.UTC(y, m, d, h, min, s));
 }
 
-// Injeta os cards imediatamente para a tela nunca ficar em branco
-function montarEstruturaCards(canaisPagina) {
+function formatarHora(date) {
+    if (!date) return "--:--";
+    return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function limparNomeExibicao(idStr) {
+    return idStr.replace(".br", "")
+                 .replace(/\./g, " ")
+                 .replace(/-/g, " ")
+                 .replace("S\u00C3\u00A9ries", "SERIES")
+                 .replace("Justi\u00C3\u00A7a", "JUSTICA")
+                 .replace("&amp;", "&")
+                 .toUpperCase();
+}
+
+function baixarDadosEpg() {
+    atualizarRelogio();
+    fetch(proxyUrl)
+        .then(res => {
+            if (!res.ok) throw new Error();
+            return res.json();
+        })
+        .then(jsonData => {
+            document.getElementById("msg-status").textContent = "Fatiando dados dos canais...";
+            
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(jsonData.contents, "text/xml");
+            
+            // Armazena em cache na memória do navegador apenas a lista de nós de programas
+            listaProgramasMestre = Array.from(xmlDoc.querySelectorAll("programme"));
+            
+            document.getElementById("msg-status").style.display = 'none';
+            ponteiroAtual = 0;
+            
+            // Dispara o carrossel contínuo de exibição
+            renderizarProximaPagina();
+            setInterval(renderizarProximaPagina, 10000);
+        })
+        .catch(() => {
+            document.getElementById("epg-container").innerHTML = `
+                <div class="loading-msg" style="color:#ef4444;">
+                    Erro ao conectar com o servidor EPGshare01.<br>
+                    Certifique-se de que o link do XML está ativo. Nova tentativa em 30 segundos...
+                </div>`;
+            setTimeout(baixarDadosEpg, 30000);
+        });
+}
+
+function renderizarProximaPagina() {
+    if (listaProgramasMestre.length === 0) return;
+
+    const agoraTime = new Date();
+    // Extrai o segmento de 4 IDs baseados na posição do ponteiro rotativo
+    const idsPaginaAtual = meusCanaisLista.slice(ponteiroAtual, ponteiroAtual + itensPorPagina);
+    
+    document.getElementById("page-info").textContent = `Canais ${ponteiroAtual + 1} - ${Math.min(ponteiroAtual + itensPorPagina, meusCanaisLista.length)} de ${meusCanaisLista.length}`;
+
     let html = "";
-    canaisPagina.forEach(canal => {
-        html += `
-        <div class="card" id="card_${canal.id}">
-            <div class="channel-name">${canal.nome}</div>
-            <div>
-                <div class="program-current" id="prog_atual_${canal.id}">Buscando programação...</div>
-                <div class="program-time" id="prog_hora_${canal.id}">🕒 --:-- - --:--</div>
-                <div class="progress-container">
-                    <div class="progress-bar" id="prog_barra_${canal.id}" style="width: 0%"></div>
-                </div>
-            </div>
-            <div class="program-next">
-                <span class="next-label">A Seguir</span>
-                <div id="prog_prox_${canal.id}">Carregando...</div>
-            </div>
-        </div>`;
-    });
-    document.getElementById("epg-container").innerHTML = html;
-}
 
-function renderizarSlideAtual() {
-    const agora = new Date();
-    const canaisPagina = listaCanaisMestre.slice(ponteiroAtual, ponteiroAtual + itensPorPagina);
-    
-    document.getElementById("page-info").textContent = `Canais ${ponteiroAtual + 1} - ${Math.min(ponteiroAtual + itensPorPagina, listaCanaisMestre.length)} de ${listaCanaisMestre.length}`;
-    
-    // Mostra os cards na tela imediatamente
-    montarEstruturaCards(canaisPagina);
-
-    // Faz a consulta assíncrona canal por canal de forma isolada
-    canaisPagina.forEach(canal => {
-        const callbackName = `callback_epg_${canal.id}`;
+    idsPaginaAtual.forEach(canalId => {
+        // Encontra cirurgicamente na memória os blocos de horário deste canal específico
+        let programasDoCanal = listaProgramasMestre.filter(p => p.getAttribute("channel") === canalId);
         
-        window[callbackName] = function(data) {
-            let atual = null;
-            let prox = null;
+        let atual = null;
+        let prox = null;
 
-            if (data && data.programs) {
-                for (let i = 0; i < data.programs.length; i++) {
-                    let pStart = new Date(data.programs[i].start);
-                    let pEnd = new Date(data.programs[i].end);
+        for (let i = 0; i < programasDoCanal.length; i++) {
+            let start = parseXMLTVDate(programasDoCanal[i].getAttribute("start"));
+            let stop = parseXMLTVDate(programasDoCanal[i].getAttribute("stop"));
 
-                    if (agora >= pStart && agora <= pEnd) {
-                        atual = data.programs[i];
-                        prox = data.programs[i + 1] || null;
-                        break;
+            if (start && stop && agoraTime >= start && agoraTime <= stop) {
+                atual = programasDoCanal[i];
+                prox = programasDoCanal[i + 1] || null;
+                break;
+            }
+        }
+
+        let atualTitulo = "Sem informação de programação";
+        let proxTitulo = "Sem informação";
+        let startReal = null;
+        let stopReal = null;
+        let progress = 0;
