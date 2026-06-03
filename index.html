@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Canal do Assinante - Guia EPG</title>
+<style>
+    :root {
+        --bg-primary: #0b0f1a;
+        --bg-card: #151f32;
+        --accent: #3b82f6;
+        --success: #10b981;
+        --text-main: #ffffff;
+        --text-muted: #9ca3af;
+    }
+
+    body {
+        margin: 0;
+        padding: 0;
+        background-color: var(--bg-primary);
+        font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+        color: var(--text-main);
+        overflow: hidden; /* Oculta rolagens para parecer tela de TV/Slide */
+    }
+
+    .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 25px;
+        height: 100vh;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+    }
+
+    header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 2px solid #1e293b;
+        padding-bottom: 15px;
+        margin-bottom: 25px;
+    }
+
+    h1 {
+        font-size: 28px;
+        margin: 0;
+        letter-spacing: 0.5px;
+    }
+
+    .status-panel {
+        display: flex;
+        gap: 15px;
+        align-items: center;
+    }
+
+    .counter-badge {
+        font-size: 14px;
+        padding: 6px 14px;
+        border-radius: 20px;
+        background: #1e293b;
+        color: var(--accent);
+        font-weight: bold;
+    }
+
+    .time-badge {
+        font-size: 22px;
+        font-weight: bold;
+        color: var(--success);
+        letter-spacing: 1px;
+    }
+
+    .epg-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 25px;
+        flex-grow: 1;
+        align-content: start;
+    }
+
+    .card {
+        background: var(--bg-card);
+        border-radius: 16px;
+        padding: 25px;
+        border: 1px solid #1e293b;
+        border-left: 6px solid var(--accent);
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        min-height: 185px;
+        animation: transicaoSlide 0.5s ease-in-out;
+    }
+
+    .channel-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+
+    .channel-name {
+        font-size: 22px;
+        font-weight: bold;
+        color: #f3f4f6;
+    }
+
+    .program-current {
+        font-size: 19px;
+        font-weight: bold;
+        color: var(--success);
+        margin-bottom: 6px;
+    }
+
+    .program-time {
+        font-size: 14px;
+        color: var(--text-muted);
+    }
+
+    .progress-container {
+        background: #1e293b;
+        height: 6px;
+        border-radius: 3px;
+        margin: 14px 0;
+        overflow: hidden;
+    }
+
+    .progress-bar {
+        background: var(--success);
+        height: 100%;
+        width: 0%;
+        transition: width 0.5s ease;
+    }
+
+    .program-next {
+        font-size: 15px;
+        color: var(--text-muted);
+        border-top: 1px solid #1e293b;
+        padding-top: 12px;
+    }
+
+    .next-label {
+        font-size: 11px;
+        text-transform: uppercase;
+        color: var(--accent);
+        display: block;
+        margin-bottom: 2px;
+        font-weight: bold;
+    }
+
+    .msg-sistema {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 50px;
+        font-size: 20px;
+        color: var(--text-muted);
+    }
+
+    @keyframes transicaoSlide {
+        from { opacity: 0; transform: translateY(12px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>📺 CANAL DO ASSINANTE</h1>
+        <div class="status-panel">
+            <div class="counter-badge" id="page-info">Lendo canais...</div>
+            <div class="time-badge" id="live-clock">00:00:00</div>
+        </div>
+    </header>
+
+    <main class="epg-grid" id="epg-container">
+        <div class="msg-sistema">Carregando arquivo de programação local (dados_epg.xml)...</div>
+    </main>
+</div>
+
+<script>
+const nomeArquivoLocal = "dados_epg.xml";
+
+// Sua lista exata de canais para filtragem e exibição no painel
+const meusCanaisLista = [
+    "A&E.br", "AMC.br", "Animal.Planet.br", "Arte.1.br", "AXN.br", "Baby.TV.br", "Band.br", "Band.News.br", 
+    "Band.Sports.br", "BBC.World.News.br", "Bis.br", "Bloomberg.br", "Canal.21.br", "Canal.Brasil.br", 
+    "Canal.do.Boi.br", "Canal.Rural.br", "Cartoon.Network.br", "Cinemax.br", "CNN.International.br", 
+    "Combate.br", "Comedy.Central.br", "Deutsche.Welle.br", "Discovery.Channel.br", "Discovery.HD.Theater.br", 
+    "Discovery.Home.&.Health.br", "Discovery.Kids.br", "Discovery.Science.br", "Discovery.Turbo.br", 
+    "Discovery.World.br", "E!.Entertainment.Television.br", "ESPN.2.br", "ESPN.3.br", "ESPN.4.br", 
+    "ESPN.5.br", "ESPN.br", "Eurochannel.br", "Film.&.Arts.br", "Futura.br", "Globo.br", "Globo.News.br", 
+    "Gloob.br", "GNT.br", "HBO.2.br", "HBO.br", "HBO.Family.br", "HBO.Plus.br", "HBO.Signature.br", 
+    "History.Channel.br", "Lifetime.br", "Megapix.br", "MTV.br", "Multishow.br", "Nickelodeon.br", 
+    "Nick.Jr..br", "OFF.HD.br", "Paramount.Channel.br", "Premiere.Clubes.br", "RAI.International.br", 
+    "Record.News.br", "Record.TV.br", "Rede.Boa.Vontade.br", "Rede.TV.br", "Rede.Vida.br", "SBT.br", 
+    "SIC.International.br", "Sony.br", "SPACE.br", "SporTV.2.br", "SporTV.3.br", "SporTV.br", 
+    "Studio.Universal.br", "TBS.br", "TCM.-.Turner.Classic.br", "Telecine.Action.br", "Telecine.Cult.br", 
+    "Telecine.Fun.br", "Telecine.Pipoca.br", "Telecine.Premium.br", "Telecine.Touch.br", "TLC.br", 
+    "TNT.br", "TNT.Séries.br", "Tooncast.br", "Travel.Box.Brazil.br", "TV5.Monde.br", "TV.Aparecida.(aberta).br", 
+    "TV.Brasil.br", "TV.Cultura.br", "TV.Escola.br", "TV.Espanha.br", "TV.Gazeta.br", "TV.Justiça.br", 
+    "TV.Senado.br", "Universal.Channel.br", "Viva.br", "Warner.Channel.br", "Woohoo.br"
+];
+
+let listaCanaisProcessados = [];
+let ponteiroAtual = 0;
+const itensPorPagina = 4; // Exibe 4 canais estilo slide por vez (2x2)
+
+function atualizarRelogio() {
+    const agora = new Date();
+    document.getElementById("live-clock").textContent = agora.toLocaleTimeString('pt-BR');
+}
+
+// Converte a string de data do XMLTV (Ex: 20260603120000 +0000) para um Objeto Date real
+function parseXMLTVDate(dateStr) {
+    if (!dateStr) return null;
+    let y = dateStr.slice(0, 4);
+    let m = dateStr.slice(4, 6) - 1;
+    let d = dateStr.slice(6, 8);
+    let h = dateStr.slice(8, 10);
+    let min = dateStr.slice(10, 12);
+    let s = dateStr.slice(12, 14) || "00";
+    return new Date(Date.UTC(y, m, d, h, min, s));
+}
+
+function formatarHora(date) {
+    if (!date) return "--:--";
+    return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function limparNomeCanal(idStr) {
+    return idStr.replace(".br", "")
+                 .replace(/\./g, " ")
+                 .replace(/-/g, " ")
+                 .replace("  ", " ")
+                 .toUpperCase();
+}
+
+function carregarXMLLocal() {
+    fetch(nomeArquivoLocal)
+        .then(res => {
+            if (!res.ok) throw new Error();
+            return res.text();
+        })
+        .then(xmlTexto => processarXML(xmlTexto))
+        .catch(() => {
+            document.getElementById("epg-container").innerHTML = `
+                <div class="msg-sistema" style="color:#ef4444;">
+                    Erro: Não foi possível ler o arquivo "dados_epg.xml".<br>
+                    Verifique se ele está na mesma pasta deste HTML e se você está rodando o endereço em um servidor web (como o Live Server).
+                </div>`;
+        });
+}
+
+function processarXML(xmlTexto) {
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(xmlTexto, "text/xml");
+    const xmlProgrammes = Array.from(xmlDoc.querySelectorAll("programme"));
+
+    listaCanaisProcessados = [];
+
+    // Filtra e agrupa os programas respeitando exatamente as regras da sua lista de IDs
+    meusCanaisLista.forEach(canalId => {
+        let progsCanal = xmlProgrammes.filter(p => {
+            let pChan = p.getAttribute("channel");
+            return pChan && pChan.trim().toLowerCase() === canalId.trim().toLowerCase();
+        });
+
+        // Adiciona o canal à lista mestre do painel rotativo
+        listaCanaisProcessados.push({
+            id: canalId,
+            nome: limparNomeCanal(canalId),
+            programas: progsCanal
+        });
+    });
+
+    ponteiroAtual = 0;
+    renderizarProximoSlide();
+}
+
+function renderizarProximoSlide() {
+    if (listaCanaisProcessados.length === 0) return;
+
+    const agoraTime = new Date();
+    // Separa os 4 canais correspondentes à rotação atual
+    const canaisExibidos = listaCanaisProcessados.slice(ponteiroAtual, ponteiroAtual + itensPorPagina);
+    
+    // Atualiza o contador de páginas no topo do slide
+    document.getElementById("page-info").textContent = `Canais ${ponteiroAtual + 1} - ${Math.min(ponteiroAtual + itensPorPagina, listaCanaisProcessados.length)} de ${listaCanaisProcessados.length}`;
+
+    let html = "";
+
+    canaisExibidos.forEach(canal => {
+        let atual = null;
+        let prox = null;
+
+        // Varre a lista de programas para localizar o que está passando de acordo com o relógio
+        for (let i = 0; i < canal.programas.length; i++) {
+            let start = parseXMLTVDate(canal.programas[i].getAttribute("start"));
+            let stop = parseXMLTVDate(canal.programas[i].getAttribute("stop"));
+
+            if (start && stop && agoraTime >= start && agoraTime <= stop) {
+                atual = canal.programas[i];
+                prox = canal.programas[i + 1] || null;
+                break;
+            }
+        }
+
+        let atualTitulo = "Sem informação de programação";
+        let proxTitulo = "Sem informação";
+        let startReal = null;
+        let stopReal = null;
+        let progress = 0;
