@@ -2,12 +2,12 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>EPG Carrossel IPTV</title>
+<title>EPG IPTV - Carrossel</title>
 
 <style>
 body {
     margin: 0;
-    font-family: Arial;
+    font-family: Arial, sans-serif;
     background: #0b1220;
     color: #fff;
 }
@@ -51,6 +51,7 @@ header {
 .now {
     color: #00ff99;
     font-size: 13px;
+    margin-top: 5px;
 }
 
 .next {
@@ -80,12 +81,12 @@ header {
 
 <script>
 
-// ==============================
-// CONFIGURAÇÃO EPG
-// ==============================
-const epgUrl = "SEU_XMLTV_AQUI.xml";
+// ===============================
+// EPG GRATUITO (IPTV-ORG)
+// ===============================
+const epgUrl = "https://iptv-org.github.io/epg/guides/br.xml";
 
-// seus canais
+// canais que você quer exibir
 const channels = [
 "JOVEM PAN2","H&H HD","TLC HD","ARTE 1","BAND NEWS",
 "TV CAMARA","TV SENADO","TV ESCOLA","CANAL SAUDE","BAND",
@@ -111,60 +112,44 @@ let page = 0;
 const perPage = 6;
 
 // relógio
-function clock(){
+function updateClock(){
     document.getElementById("clock").innerText =
     new Date().toLocaleTimeString("pt-BR");
 }
-setInterval(clock,1000);
-clock();
+setInterval(updateClock,1000);
+updateClock();
 
-// ==============================
+// ===============================
 // CARREGA EPG XMLTV
-// ==============================
+// ===============================
 async function loadEPG(){
     try {
         const res = await fetch(epgUrl);
         const text = await res.text();
 
         const xml = new DOMParser().parseFromString(text,"text/xml");
-        const progs = xml.getElementsByTagName("programme");
+        const programs = xml.getElementsByTagName("programme");
 
         epgData = {};
 
-        for(let i=0;i<progs.length;i++){
-            let ch = progs[i].getAttribute("channel");
-            let title = progs[i].getElementsByTagName("title")[0]?.textContent || "";
-            let start = progs[i].getAttribute("start");
+        for(let i=0;i<programs.length;i++){
+            const ch = programs[i].getAttribute("channel");
+            const title = programs[i].getElementsByTagName("title")[0]?.textContent || "";
 
             if(!epgData[ch]) epgData[ch] = [];
 
-            epgData[ch].push({
-                title,
-                start: parseTime(start)
-            });
+            epgData[ch].push(title);
         }
 
         render();
     } catch(e){
-        console.log("Erro EPG",e);
+        console.log("Erro EPG:",e);
     }
 }
 
-// converte horário XMLTV
-function parseTime(str){
-    if(!str) return new Date();
-    return new Date(
-        str.substr(0,4)+"-"+
-        str.substr(4,2)+"-"+
-        str.substr(6,2)+"T"+
-        str.substr(8,2)+":"+
-        str.substr(10,2)+":00"
-    );
-}
-
-// ==============================
-// RENDER GRID (6 canais)
-// ==============================
+// ===============================
+// RENDER 6 CANAIS POR TELA
+// ===============================
 function render(){
 
     const grid = document.getElementById("grid");
@@ -181,8 +166,8 @@ function render(){
 
         const prog = epgData[name] || [];
 
-        const now = prog[0]?.title || "Sem informação";
-        const next = prog[1]?.title || "";
+        const now = prog[0] || "Sem informação";
+        const next = prog[1] || "";
 
         const card = document.createElement("div");
         card.className = "card";
@@ -200,10 +185,8 @@ function render(){
     if(page * perPage >= channels.length) page = 0;
 }
 
-// auto carrossel 10s
-setInterval(()=>{
-    render();
-},10000);
+// carrossel automático 10s
+setInterval(render,10000);
 
 // init
 loadEPG();
