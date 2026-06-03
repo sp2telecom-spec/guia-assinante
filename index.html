@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Canal do Assinante - Guia EPG Automático</title>
+<title>Canal do Assinante - EPGshare01</title>
 <style>
     :root {
         --bg-primary: #0b0f1a;
@@ -174,12 +174,16 @@
     </header>
 
     <main class="epg-grid" id="epg-container">
-        <div class="msg-sistema" id="mensagem-status">Sincronizando guia digital com o servidor epg.pw...</div>
+        <div class="msg-sistema" id="mensagem-status">Conectando ao servidor remoto epgshare01.online...</div>
     </main>
 </div>
 
 <script>
-// Lista estrita de IDs de canais fornecida para filtragem
+// Link oficial unificado do seu provedor de dados
+const urlProvedorEpg = "https://epgshare01.online/epgshare01/epg_ripper_BR2.xml"; 
+const proxyCorsAllOrigins = `https://allorigins.win{encodeURIComponent(urlProvedorEpg)}`;
+
+// Sua lista exata de IDs para realizar o filtro cirúrgico na array de dados
 const meusCanaisLista = [
     "A&E.br", "AMC.br", "Animal.Planet.br", "Arte.1.br", "AXN.br", "Baby.TV.br", "Band.br", "Band.News.br", 
     "Band.Sports.br", "BBC.World.News.br", "Bis.br", "Bloomberg.br", "Canal.21.br", "Canal.Brasil.br", 
@@ -209,15 +213,6 @@ function atualizarRelogio() {
     document.getElementById("live-clock").textContent = agora.toLocaleTimeString('pt-BR');
 }
 
-// Formata a data atual no padrão YYYYMMDD exigido pelo epg.pw
-function obterDataFormatada() {
-    const agora = new Date();
-    const ano = agora.getFullYear();
-    const mes = String(agora.getMonth() + 1).padStart(2, '0');
-    const dia = String(agora.getDate()).padStart(2, '0');
-    return `${ano}${mes}${dia}`;
-}
-
 function parseXMLTVDate(dateStr) {
     if (!dateStr) return null;
     let y = dateStr.slice(0, 4);
@@ -238,31 +233,27 @@ function limparNomeCanal(idStr) {
     return idStr.replace(".br", "").replace(/\./g, " ").replace(/-/g, " ").replace("  ", " ").toUpperCase();
 }
 
-// Faz o download direto da API do epg.pw usando o proxy estável do allorigins
-function carregarEPGDaInternet() {
-    const dataAlvo = obterDataFormatada();
-    // Link direto do repositório unificado epg.pw para o Brasil
-    const urlOriginalEpg = `https://github.io`;
-    const urlComProxy = `https://allorigins.win{encodeURIComponent(urlOriginalEpg)}`;
+function carregarEPGProvedor() {
+    document.getElementById("mensagem-status").textContent = "Efetuando o download do arquivo mestre epg_ripper_BR2.xml...";
 
-    document.getElementById("mensagem-status").textContent = "Baixando guia atualizado da internet...";
-
-    fetch(urlComProxy)
+    fetch(proxyCorsAllOrigins)
         .then(res => {
             if (!res.ok) throw new Error();
             return res.json();
         })
-        .then(jsonResponse => {
-            processarXML(jsonResponse.contents);
+        .then(jsonWrapper => {
+            document.getElementById("mensagem-status").textContent = "Separando e indexando os canais do seu plano...";
+            // setTimeout curto para dar tempo de renderizar o texto de transição antes do processamento pesado
+            setTimeout(() => processarXML(jsonWrapper.contents), 50);
         })
         .catch(err => {
             console.error(err);
             document.getElementById("epg-container").innerHTML = `
                 <div class="msg-sistema" style="color:#ef4444;">
-                    Erro ao conectar com o servidor epg.pw.<br>
-                    O serviço pode estar em manutenção. Tentando reconectar automaticamente em instantes...
+                    Erro de conexão com o servidor epgshare01.<br>
+                    O link de dados pode estar indisponível temporariamente. Nova tentativa em 30 segundos...
                 </div>`;
-            setTimeout(carregarEPGDaInternet, 30000);
+            setTimeout(carregarEPGProvedor, 30000);
         });
 }
 
@@ -273,6 +264,7 @@ function processarXML(xmlTexto) {
 
     listaCanaisProcessados = [];
 
+    // Faz o casamento exato e otimizado dos IDs dos programas com a sua lista cadastrada
     meusCanaisLista.forEach(canalId => {
         let progsCanal = xmlProgrammes.filter(p => {
             let pChan = p.getAttribute("channel");
@@ -294,7 +286,7 @@ function renderizarProximoSlide() {
     if (listaCanaisProcessados.length === 0) return;
 
     const agoraTime = new Date();
-    const canaisExibidos = listaCanaisProcessados.slice(ponteiroAtual, pointerEnd = ponteiroAtual + itensPorPagina);
+    const canaisExibidos = listaCanaisProcessados.slice(ponteiroAtual, ponteiroAtual + itensPorPagina);
     
     document.getElementById("page-info").textContent = `Canais ${ponteiroAtual + 1} - ${Math.min(ponteiroAtual + itensPorPagina, listaCanaisProcessados.length)} de ${listaCanaisProcessados.length}`;
 
@@ -315,9 +307,4 @@ function renderizarProximoSlide() {
             }
         }
 
-
         let atualTitulo = "Sem informação de programação";
-        let proxTitulo = "Sem informação";
-        let startReal = null;
-        let stopReal = null;
-        let progress = 0;
