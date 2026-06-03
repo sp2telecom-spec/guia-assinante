@@ -1,260 +1,209 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>EPG PREMIUM</title>
+<title>EPG TV</title>
 
 <style>
 body {
-  margin:0;
-  font-family:Arial;
-  background:#0b1220;
-  color:#fff;
-  overflow:hidden;
+  margin: 0;
+  background: #0b0b0f;
+  font-family: Arial, sans-serif;
+  color: #fff;
 }
 
+/* HEADER */
 header {
-  background:#111b2e;
-  padding:12px;
-  display:flex;
-  justify-content:space-between;
+  padding: 20px;
+  font-size: 24px;
+  font-weight: bold;
 }
 
-#grid {
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  grid-template-rows:repeat(3,1fr);
-  gap:12px;
-  padding:12px;
-  height:calc(100vh - 60px);
+/* CARROSSEL */
+#carousel {
+  display: flex;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  padding: 20px;
+  gap: 15px;
 }
 
-.card {
-  background:linear-gradient(145deg,#162235,#0f172a);
-  padding:12px;
-  border-radius:12px;
-  display:flex;
-  flex-direction:column;
-  justify-content:space-between;
-  box-shadow:0 0 20px rgba(0,0,0,0.6);
-  opacity:0;
-  transform:translateY(20px);
-  animation:fadeIn 0.6s forwards;
-}
-
-@keyframes fadeIn {
-  to {
-    opacity:1;
-    transform:translateY(0);
-  }
-}
-
-.top {
-  display:flex;
-  align-items:center;
-  gap:10px;
-}
-
-.logo {
-  width:50px;
-  height:50px;
-  object-fit:contain;
-}
-
-.number {
-  font-size:14px;
-  color:#888;
-}
-
+/* CARD */
 .channel {
-  font-size:16px;
-  font-weight:bold;
-  color:#00d4ff;
+  min-width: 260px;
+  background: #14141c;
+  border-radius: 12px;
+  padding: 15px;
+  transition: 0.3s;
+  position: relative;
 }
 
-.now {
-  font-size:14px;
-  color:#00ff99;
+.channel:hover {
+  transform: scale(1.08);
+  background: #1f1f2a;
 }
 
-.next {
-  font-size:12px;
-  color:#aaa;
+/* LOGO */
+.logo {
+  width: 100%;
+  height: 80px;
+  object-fit: contain;
+  margin-bottom: 10px;
 }
 
-/* barra */
+/* NUMERO */
+.number {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 12px;
+  opacity: 0.5;
+}
+
+/* TITULO */
+.title {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+/* PROGRAMA */
+.program {
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+/* BARRA */
 .progress {
-  height:6px;
-  background:#222;
-  border-radius:10px;
-  overflow:hidden;
-  margin-top:6px;
+  margin-top: 10px;
+  height: 5px;
+  background: #333;
+  border-radius: 5px;
+  overflow: hidden;
 }
 
-.bar {
-  height:100%;
-  background:linear-gradient(90deg,#00ff99,#00d4ff);
-  width:0%;
-  transition:width 1s linear;
+.progress-bar {
+  height: 100%;
+  background: #e50914;
+  width: 0%;
+}
+
+/* AUTO SCROLL */
+#carousel::-webkit-scrollbar {
+  display: none;
 }
 </style>
 </head>
 
 <body>
 
-<header>
-<div>📺 GUIA PREMIUM</div>
-<div id="clock"></div>
-</header>
+<header>📺 Guia de Programação</header>
 
-<div id="grid"></div>
+<div id="carousel"></div>
 
 <script>
+const EPG_URL = "dados_epg.xml";
 
-const epgUrl = "./dados_epg.xml";
+/* LOGOS */
+const logos = {
+"JOVEM PAN2":"https://upload.wikimedia.org/wikipedia/commons/4/41/Logotipo_da_TV_Jovem_Pan_News.png",
+"H&H HD":"https://upload.wikimedia.org/wikipedia/commons/9/90/Discovery_H%26H_Logo_2022.webp",
+"TLC HD":"https://upload.wikimedia.org/wikipedia/commons/7/74/TLC_Logo.svg",
+"ARTE 1":"https://upload.wikimedia.org/wikipedia/commons/3/31/Arte_1_logo.svg",
+"BAND NEWS":"https://upload.wikimedia.org/wikipedia/commons/c/ce/BandNewsTV2024.svg",
+"TV CAMARA":"https://upload.wikimedia.org/wikipedia/commons/8/8e/Marca_TV_C%C3%A2mara_-_2018.png",
+"TV SENADO":"https://upload.wikimedia.org/wikipedia/commons/3/3f/TV_Senado_logo_%281996%E2%80%932016%29.png",
+"TV ESCOLA":"https://upload.wikimedia.org/wikipedia/commons/b/b5/TV_Escola.png",
+"CANAL SAUDE":"https://acervo.canalsaude.fiocruz.br/tools/images/logo-topMaior.jpg",
+"BAND":"https://upload.wikimedia.org/wikipedia/commons/2/2b/Rede_Bandeirantes_logo_2018.svg",
+"RECORD NEWS":"https://upload.wikimedia.org/wikipedia/commons/4/46/Record_News_logo_2023.svg",
+"CNN BRASIL":"https://upload.wikimedia.org/wikipedia/commons/8/8b/CNN_Brasil_%28red_background%29.svg",
+"CARTOON NETWORK":"https://upload.wikimedia.org/wikipedia/commons/8/80/Cartoon_Network_2010_logo.svg",
+"DISCOVERY":"https://upload.wikimedia.org/wikipedia/commons/f/f1/2019_Discovery_logo.svg",
+"WARNER HD":"https://upload.wikimedia.org/wikipedia/commons/b/b0/Warner_Channel_2026.svg",
+"SONY HD":"https://upload.wikimedia.org/wikipedia/commons/e/ee/Sony_Channel_LA_2023.png",
+"SPACE HD":"https://upload.wikimedia.org/wikipedia/commons/1/1a/SpaceLogo.svg",
+"TNT HD":"https://upload.wikimedia.org/wikipedia/commons/2/24/TNT_Logo_2016.svg",
+"HISTORY HD":"https://upload.wikimedia.org/wikipedia/commons/0/01/History_%282021%29.svg",
+"AXN HD":"https://upload.wikimedia.org/wikipedia/commons/5/52/AXN_logo_%282015%29.svg",
+"A&E HD":"https://upload.wikimedia.org/wikipedia/commons/d/df/A%26E_Network_logo.svg"
+};
 
-const channels = [
-  { id:"ESPN.br", name:"ESPN HD" },
-  { id:"ESPN.2.br", name:"ESPN 2" },
-  { id:"Band.br", name:"BAND" },
-  { id:"Band.News.br", name:"BAND NEWS" },
-  { id:"CNN.International.br", name:"CNN BRASIL" },
-  { id:"Record.News.br", name:"RECORD NEWS" },
-  { id:"Cartoon.Network.br", name:"CARTOON NETWORK" },
-  { id:"Discovery.Channel.br", name:"DISCOVERY CHANNEL" },
-  { id:"TLC.br", name:"TLC HD" }
-];
-
-let epg = {};
-let page = 0;
-
-// relógio
-setInterval(()=>{
-document.getElementById("clock").innerText =
-new Date().toLocaleTimeString("pt-BR");
-},1000);
-
-// logo automático
-function getLogo(name){
-let base = name.toLowerCase().replace(/\s/g,"");
-return `https://logo.clearbit.com/${base}.com`;
+/* FORMATAR HORA */
+function formatTime(t){
+  return t.substring(8,10)+":"+t.substring(10,12);
 }
 
-// parse hora
-function parseTime(t){
-return new Date(
-t.substring(0,4)+"-"+t.substring(4,6)+"-"+t.substring(6,8)+"T"+
-t.substring(8,10)+":"+t.substring(10,12)+":"+t.substring(12,14)
-).getTime();
+/* CALCULAR PROGRESSO */
+function calcProgress(start, stop){
+  const now = new Date().getTime();
+  const s = new Date(
+    start.substring(0,4),
+    start.substring(4,6)-1,
+    start.substring(6,8),
+    start.substring(8,10),
+    start.substring(10,12)
+  ).getTime();
+
+  const e = new Date(
+    stop.substring(0,4),
+    stop.substring(4,6)-1,
+    stop.substring(6,8),
+    stop.substring(8,10),
+    stop.substring(10,12)
+  ).getTime();
+
+  return Math.min(100, Math.max(0, ((now - s) / (e - s)) * 100));
 }
 
-// load epg
-async function load(){
+/* LOAD EPG */
+fetch(EPG_URL)
+.then(r => r.text())
+.then(str => new window.DOMParser().parseFromString(str,"text/xml"))
+.then(data => {
 
-const res = await fetch(epgUrl);
-const xml = new DOMParser().parseFromString(await res.text(),"text/xml");
+  const progs = data.querySelectorAll("programme");
+  const container = document.getElementById("carousel");
 
-const items = xml.getElementsByTagName("programme");
+  let i = 1;
 
-epg = {};
+  progs.forEach(p => {
 
-for(let i=0;i<items.length;i++){
+    const now = new Date().toISOString().replace(/[-:TZ]/g,"").slice(0,12);
+    if (p.getAttribute("start") <= now && p.getAttribute("stop") >= now) {
 
-let ch = items[i].getAttribute("channel");
-let title = items[i].getElementsByTagName("title")[0]?.textContent || "";
-let start = parseTime(items[i].getAttribute("start"));
-let stop = parseTime(items[i].getAttribute("stop"));
+      const title = p.querySelector("title")?.textContent || "Sem título";
+      const channel = p.getAttribute("channel");
 
-if(!epg[ch]) epg[ch] = [];
+      const logo = logos[channel] || "https://via.placeholder.com/150x80?text=TV";
 
-epg[ch].push({title,start,stop});
-}
+      const progress = calcProgress(p.getAttribute("start"), p.getAttribute("stop"));
 
-render();
-}
+      const card = `
+      <div class="channel">
+        <div class="number">${String(i).padStart(3,"0")}</div>
+        <img class="logo" src="${logo}">
+        <div class="title">${channel}</div>
+        <div class="program">${title}</div>
+        <div class="progress">
+          <div class="progress-bar" style="width:${progress}%"></div>
+        </div>
+      </div>
+      `;
 
-// agora
-function getNow(id){
-let list = epg[id];
-if(!list) return null;
-
-let now = Date.now();
-
-for(let p of list){
-if(now>=p.start && now<=p.stop){
-let progress = ((now-p.start)/(p.stop-p.start))*100;
-return {title:p.title,progress};
-}
-}
-return null;
-}
-
-// próximo
-function getNext(id){
-let list = epg[id];
-if(!list) return "";
-
-let now = Date.now();
-
-for(let p of list){
-if(p.start>now) return p.title;
-}
-return "";
-}
-
-// render com paginação
-function render(){
-
-const grid = document.getElementById("grid");
-grid.innerHTML = "";
-
-let start = page * 6;
-let slice = channels.slice(start,start+6);
-
-slice.forEach((c,i)=>{
-
-let now = getNow(c.id);
-let next = getNext(c.id);
-
-let number = String(start+i+1).padStart(3,"0");
-
-const div = document.createElement("div");
-div.className="card";
-
-div.innerHTML=`
-<div class="top">
-  <img class="logo" src="${getLogo(c.name)}">
-  <div>
-    <div class="number">${number}</div>
-    <div class="channel">${c.name}</div>
-  </div>
-</div>
-
-<div class="now">AGORA: ${now?.title || "Sem info"}</div>
-
-<div class="progress">
-  <div class="bar" style="width:${now?.progress || 0}%"></div>
-</div>
-
-<div class="next">PRÓXIMO: ${next || "Sem info"}</div>
-`;
-
-grid.appendChild(div);
+      container.innerHTML += card;
+      i++;
+    }
+  });
 
 });
 
-}
-
-// carrossel automático
+/* AUTO CARROSSEL */
 setInterval(()=>{
-page++;
-if(page*6 >= channels.length) page = 0;
-render();
-},10000);
-
-// init
-load();
-setInterval(load,300000);
+  document.getElementById("carousel").scrollBy({
+    left: 300,
+    behavior: "smooth"
+  });
+}, 4000);
 
 </script>
 
