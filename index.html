@@ -2,43 +2,86 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>EPG LOCAL</title>
+<title>EPG PRO</title>
 
 <style>
-body { margin:0; font-family:Arial; background:#0b1220; color:#fff; }
+body {
+  margin:0;
+  font-family:Arial;
+  background:#0b1220;
+  color:#fff;
+}
 
 header {
   background:#111b2e;
-  padding:10px;
+  padding:12px;
   display:flex;
   justify-content:space-between;
+  font-size:18px;
 }
 
 #grid {
   display:grid;
   grid-template-columns:1fr 1fr;
   grid-template-rows:repeat(3,1fr);
-  gap:10px;
-  padding:10px;
-  height:calc(100vh - 50px);
+  gap:12px;
+  padding:12px;
+  height:calc(100vh - 60px);
 }
 
 .card {
-  background:#162235;
-  padding:10px;
-  border-radius:8px;
+  background:linear-gradient(145deg,#162235,#0f172a);
+  padding:12px;
+  border-radius:12px;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  box-shadow:0 0 15px rgba(0,0,0,0.5);
+  transition:0.3s;
 }
 
-.channel { color:#00d4ff; font-weight:bold; }
-.now { color:#00ff99; }
-.next { color:#aaa; font-size:12px; }
+.card:hover {
+  transform:scale(1.02);
+}
+
+.channel {
+  font-size:18px;
+  font-weight:bold;
+  color:#00d4ff;
+}
+
+.now {
+  font-size:14px;
+  color:#00ff99;
+}
+
+.next {
+  font-size:13px;
+  color:#aaa;
+}
+
+/* barra */
+.progress {
+  height:6px;
+  background:#222;
+  border-radius:10px;
+  overflow:hidden;
+  margin-top:8px;
+}
+
+.bar {
+  height:100%;
+  background:linear-gradient(90deg,#00ff99,#00d4ff);
+  width:0%;
+  transition:width 0.5s;
+}
 </style>
 </head>
 
 <body>
 
 <header>
-<div>📺 EPG LOCAL</div>
+<div>📺 GUIA DE PROGRAMAÇÃO</div>
 <div id="clock"></div>
 </header>
 
@@ -46,7 +89,7 @@ header {
 
 <script>
 
-const epgUrl = "./dados_epg.xml";
+const epgUrl = "./epg.xml";
 
 const channels = [
   { id: "ESPN.br", name: "ESPN HD" },
@@ -59,11 +102,22 @@ const channels = [
 
 let epg = {};
 
+// relógio
 setInterval(()=>{
 document.getElementById("clock").innerText =
 new Date().toLocaleTimeString("pt-BR");
 },1000);
 
+// converter horário XMLTV
+function parseTime(t){
+if(!t) return 0;
+return new Date(
+t.substring(0,4)+"-"+t.substring(4,6)+"-"+t.substring(6,8)+"T"+
+t.substring(8,10)+":"+t.substring(10,12)+":"+t.substring(12,14)
+).getTime();
+}
+
+// carregar epg
 async function load(){
 
 const res = await fetch(epgUrl);
@@ -77,21 +131,53 @@ for(let i=0;i<items.length;i++){
 
 let ch = items[i].getAttribute("channel");
 let title = items[i].getElementsByTagName("title")[0]?.textContent || "";
+let start = parseTime(items[i].getAttribute("start"));
+let stop = parseTime(items[i].getAttribute("stop"));
 
 if(!epg[ch]) epg[ch] = [];
 
-epg[ch].push(title);
+epg[ch].push({title,start,stop});
 }
 
 render();
 }
 
-function get(id){
+// pegar agora + progresso
+function getNow(id){
+
 let list = epg[id];
-if(!list) return ["Sem info",""];
-return [list[0]||"", list[1]||""];
+if(!list) return null;
+
+let nowTime = Date.now();
+
+for(let p of list){
+if(nowTime >= p.start && nowTime <= p.stop){
+let progress = ((nowTime - p.start) / (p.stop - p.start)) * 100;
+return {title:p.title, progress};
+}
 }
 
+return null;
+}
+
+// próximo
+function getNext(id){
+
+let list = epg[id];
+if(!list) return "";
+
+let nowTime = Date.now();
+
+for(let p of list){
+if(p.start > nowTime){
+return p.title;
+}
+}
+
+return "";
+}
+
+// render
 function render(){
 
 const grid = document.getElementById("grid");
@@ -99,16 +185,22 @@ grid.innerHTML = "";
 
 channels.forEach(c=>{
 
-let [now,next] = get(c.id);
+let now = getNow(c.id);
+let next = getNext(c.id);
 
 const div = document.createElement("div");
-
 div.className="card";
 
 div.innerHTML=`
-<div class="channel">${c.name}</div>
-<div class="now">AGORA: ${now}</div>
-<div class="next">PRÓXIMO: ${next}</div>
+<div>
+  <div class="channel">${c.name}</div>
+  <div class="now">AGORA: ${now?.title || "Sem info"}</div>
+  <div class="progress">
+    <div class="bar" style="width:${now?.progress || 0}%"></div>
+  </div>
+</div>
+
+<div class="next">PRÓXIMO: ${next || "Sem info"}</div>
 `;
 
 grid.appendChild(div);
@@ -117,6 +209,7 @@ grid.appendChild(div);
 
 }
 
+// init
 load();
 setInterval(load,300000);
 
