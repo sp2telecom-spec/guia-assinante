@@ -2,70 +2,52 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>EPG IPTV - Carrossel</title>
+<title>EPG IPTV FIX</title>
 
 <style>
 body {
     margin: 0;
-    font-family: Arial, sans-serif;
+    font-family: Arial;
     background: #0b1220;
     color: #fff;
 }
 
 header {
     background: #111b2e;
-    padding: 12px;
+    padding: 10px;
     display: flex;
     justify-content: space-between;
-    align-items: center;
 }
 
-#clock {
-    color: #00ff99;
-    font-weight: bold;
-}
-
-.container {
+#grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     grid-template-rows: repeat(3, 1fr);
     gap: 10px;
     padding: 10px;
-    height: calc(100vh - 60px);
+    height: calc(100vh - 50px);
 }
 
 .card {
     background: #162235;
-    border-radius: 8px;
     padding: 10px;
-    overflow: hidden;
+    border-radius: 8px;
 }
 
 .channel {
     color: #00d4ff;
     font-weight: bold;
-    font-size: 14px;
-    margin-bottom: 5px;
+    margin-bottom: 6px;
 }
 
 .now {
     color: #00ff99;
     font-size: 13px;
-    margin-top: 5px;
 }
 
 .next {
     color: #aaa;
     font-size: 12px;
-}
-
-.fade {
-    animation: fade 0.5s ease-in-out;
-}
-
-@keyframes fade {
-    from {opacity: 0.2;}
-    to {opacity: 1;}
 }
 </style>
 </head>
@@ -73,120 +55,124 @@ header {
 <body>
 
 <header>
-    <div>📺 Guia de Programação IPTV</div>
+    <div>📺 EPG IPTV FIX</div>
     <div id="clock"></div>
 </header>
 
-<div class="container" id="grid"></div>
+<div id="grid"></div>
 
 <script>
 
-// ===============================
-// EPG GRATUITO (IPTV-ORG)
-// ===============================
+// ✔ EPG oficial
 const epgUrl = "https://iptv-org.github.io/epg/guides/br.xml";
 
-// canais que você quer exibir
+// seus canais
 const channels = [
 "JOVEM PAN2","H&H HD","TLC HD","ARTE 1","BAND NEWS",
 "TV CAMARA","TV SENADO","TV ESCOLA","CANAL SAUDE","BAND",
 "RECORD NEWS","CNN BRASIL","CNN INTERNACIONAL","CNN ESPANHOL",
-"BAND SPORTS HD","FISH TV","BAND MAIS HD","EPTV SÃO CARLOS",
-"RBI","ESPN HD","ESPN 2","ESPN 3","ESPN 4","ESPN 5","ESPN 6 (ESPN EXTRA HD)",
-"CARTOON NETWORK","CARTOONITO","TOONCAST","RATIMBUM","DISCOVERY KIDS","REDE TV HD",
-"RECORD INTERIOR","TV CULTURA HD","UNIVESP","REDE ALESP","TV CAMARA SP",
-"REDE VIDA HD","REDE VIDA +","REDE VIDA EDUCAÇÃO",
-"DISCOVERY ID","DISCOVERY","DISCOVERY TURBO","DISCOVERY SCIENCE HD",
-"DISCOVERY THEATER HD","DISCOVERY WORLD HD",
-"WOOHOO","WARNER HD","SONY HD","SONY MOVIES","SPACE HD","CINE BRASIL",
-"TV APARECIDA","VTV SBT HD","MAIS FAMILIA HD","BOAS NOVAS",
-"CANAL DO BOI HD","AGRO CANAL HD","CANAL RURAL HD","TERRA VIVA","TCM",
-"ANIMAL PLANET HD","HISTORY HD","HISTORY 2 HD","HGTV","AXN HD","A&E HD",
-"TNT HD","TNT SERIES","LIFETIME HD","FASHION TV","MUSIC BOX HD","TNT NOVELA",
-"TRAVEL BOX","CHEF TV","CINEMAX","SABOR E ARTE","TOP FILM","ADULT SWIM",
-"TV LEME","AMC","PRIME BOX","CAZE TV"
+"ESPN HD","ESPN 2","ESPN 3","ESPN 4","ESPN 5","ESPN 6 (ESPN EXTRA HD)"
 ];
 
-let epgData = {};
-let page = 0;
-const perPage = 6;
+let epgMap = {};
 
 // relógio
-function updateClock(){
+setInterval(()=>{
     document.getElementById("clock").innerText =
     new Date().toLocaleTimeString("pt-BR");
-}
-setInterval(updateClock,1000);
-updateClock();
+},1000);
 
-// ===============================
-// CARREGA EPG XMLTV
-// ===============================
+// normaliza nomes
+function norm(name){
+    return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g,"")
+    .replace(/\s/g,"");
+}
+
+// converte horário XMLTV
+function parseTime(t){
+    if(!t) return new Date();
+    return new Date(
+        t.substr(0,4)+"-"+
+        t.substr(4,2)+"-"+
+        t.substr(6,2)+"T"+
+        t.substr(8,2)+":"+
+        t.substr(10,2)+":00"
+    );
+}
+
+// ======================
+// CARREGA EPG
+// ======================
 async function loadEPG(){
-    try {
-        const res = await fetch(epgUrl);
-        const text = await res.text();
 
-        const xml = new DOMParser().parseFromString(text,"text/xml");
-        const programs = xml.getElementsByTagName("programme");
+    const res = await fetch(epgUrl);
+    const xmlText = await res.text();
 
-        epgData = {};
+    const xml = new DOMParser().parseFromString(xmlText,"text/xml");
+    const items = xml.getElementsByTagName("programme");
 
-        for(let i=0;i<programs.length;i++){
-            const ch = programs[i].getAttribute("channel");
-            const title = programs[i].getElementsByTagName("title")[0]?.textContent || "";
+    epgMap = {};
 
-            if(!epgData[ch]) epgData[ch] = [];
+    for(let i=0;i<items.length;i++){
 
-            epgData[ch].push(title);
-        }
+        let ch = items[i].getAttribute("channel");
+        let title = items[i].getElementsByTagName("title")[0]?.textContent || "";
+        let start = parseTime(items[i].getAttribute("start"));
 
-        render();
-    } catch(e){
-        console.log("Erro EPG:",e);
+        if(!epgMap[ch]) epgMap[ch] = [];
+
+        epgMap[ch].push({title,start});
     }
+
+    render();
 }
 
-// ===============================
-// RENDER 6 CANAIS POR TELA
-// ===============================
+// ======================
+// MATCH SIMPLES
+// ======================
+function findProgram(channelName){
+
+    let key = Object.keys(epgMap).find(k =>
+        norm(k).includes(norm(channelName))
+    );
+
+    if(!key) return ["Sem info",""];
+
+    let list = epgMap[key];
+
+    let now = list[0]?.title || "Sem info";
+    let next = list[1]?.title || "";
+
+    return [now,next];
+}
+
+// ======================
+// RENDER
+// ======================
 function render(){
 
     const grid = document.getElementById("grid");
-    grid.classList.add("fade");
-
-    setTimeout(()=>grid.classList.remove("fade"),500);
-
     grid.innerHTML = "";
 
-    const start = page * perPage;
-    const slice = channels.slice(start,start+perPage);
+    channels.slice(0,6).forEach(ch=>{
 
-    slice.forEach(name=>{
+        const [now,next] = findProgram(ch);
 
-        const prog = epgData[name] || [];
+        const div = document.createElement("div");
+        div.className = "card";
 
-        const now = prog[0] || "Sem informação";
-        const next = prog[1] || "";
-
-        const card = document.createElement("div");
-        card.className = "card";
-
-        card.innerHTML = `
-            <div class="channel">${name}</div>
+        div.innerHTML = `
+            <div class="channel">${ch}</div>
             <div class="now">AGORA: ${now}</div>
             <div class="next">PRÓXIMO: ${next}</div>
         `;
 
-        grid.appendChild(card);
+        grid.appendChild(div);
     });
-
-    page++;
-    if(page * perPage >= channels.length) page = 0;
 }
-
-// carrossel automático 10s
-setInterval(render,10000);
 
 // init
 loadEPG();
