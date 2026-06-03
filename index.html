@@ -5,74 +5,120 @@
 <title>EPG TV</title>
 
 <style>
-body{
+
+/* ===== TELA 16:9 FIXA (PADRÃO OBS) ===== */
+html, body{
+  width:1920px;
+  height:1080px;
   margin:0;
-  background:#0b0b0f;
-  font-family:Arial;
-  color:#fff;
+  padding:0;
   overflow:hidden;
+  background:#0b0b0f;
+  font-family:Arial, sans-serif;
+  color:#fff;
 }
 
+/* CENTRALIZA */
+body{
+  display:flex;
+  flex-direction:column;
+}
+
+/* HEADER */
 header{
-  padding:20px;
-  font-size:22px;
+  padding:25px 40px;
+  font-size:32px;
+  font-weight:bold;
 }
 
+/* CARROSSEL */
 #carousel{
   display:flex;
-  gap:15px;
-  padding:20px;
-  transition:transform .5s ease;
+  gap:20px;
+  padding:20px 40px;
+  transition:transform .6s ease;
 }
 
+/* CARD */
 .channel{
-  min-width:260px;
+  min-width:300px;
+  height:280px;
   background:#14141c;
-  border-radius:12px;
+  border-radius:14px;
   padding:15px;
+  box-shadow:0 0 20px rgba(0,0,0,0.4);
 }
 
+/* LOGO */
 .logo{
   width:100%;
-  height:80px;
+  height:90px;
   object-fit:contain;
 }
 
-.title{font-weight:bold;margin-top:10px;}
-.program{font-size:14px;opacity:.85;}
-.next{font-size:13px;opacity:.6;margin-top:8px;}
-
-.progress{
-  height:5px;
-  background:#333;
+/* TEXTOS */
+.title{
+  font-size:18px;
+  font-weight:bold;
   margin-top:10px;
 }
+
+.program{
+  font-size:15px;
+  margin-top:8px;
+}
+
+.next{
+  font-size:13px;
+  opacity:.7;
+  margin-top:10px;
+}
+
+/* BARRA */
+.progress{
+  height:6px;
+  background:#333;
+  margin-top:12px;
+  border-radius:10px;
+  overflow:hidden;
+}
+
 .bar{
   height:100%;
   background:#e50914;
 }
+
+/* ANIMAÇÃO LEVE */
+.channel:hover{
+  transform:scale(1.05);
+  transition:.3s;
+}
+
 </style>
 </head>
 
 <body>
 
-<header>📺 Guia TV</header>
+<header>📺 Guia de Programação</header>
 <div id="carousel"></div>
 
 <script>
+
+/* ===== CONFIG ===== */
 const EPG_URL = "dados_epg.xml";
 
-/* CANAIS (teste inicial) */
+/* CANAIS (EDITE AQUI COM SEUS LOGOS) */
 const canais = [
-{num:"01.1", nome:"JOVEM PAN2", id:"JovemPan.br", logo:"https://images.weserv.nl/?url=upload.wikimedia.org/wikipedia/commons/4/41/Logotipo_da_TV_Jovem_Pan_News.png"},
-{num:"03.1", nome:"RECORD NEWS", id:"Record.News.br", logo:"https://images.weserv.nl/?url=upload.wikimedia.org/wikipedia/commons/4/46/Record_News_logo_2023.svg"},
-{num:"08.1", nome:"ESPN HD", id:"ESPN.br", logo:"https://images.weserv.nl/?url=upload.wikimedia.org/wikipedia/commons/2/2f/ESPN_wordmark.svg"},
-{num:"09.1", nome:"CARTOON NETWORK", id:"Cartoon.Network.br", logo:"https://images.weserv.nl/?url=upload.wikimedia.org/wikipedia/commons/8/80/Cartoon_Network_2010_logo.svg"},
-{num:"55.1", nome:"TNT HD", id:"TNT.br", logo:"https://images.weserv.nl/?url=upload.wikimedia.org/wikipedia/commons/2/24/TNT_Logo_2016.svg"}
+{num:"001", nome:"JOVEM PAN", id:"JovemPan.br", logo:"https://images.weserv.nl/?url=upload.wikimedia.org/wikipedia/commons/4/41/Logotipo_da_TV_Jovem_Pan_News.png"},
+{num:"002", nome:"RECORD NEWS", id:"Record.News.br", logo:"https://images.weserv.nl/?url=upload.wikimedia.org/wikipedia/commons/4/46/Record_News_logo_2023.svg"},
+{num:"003", nome:"ESPN", id:"ESPN.br", logo:"https://images.weserv.nl/?url=upload.wikimedia.org/wikipedia/commons/2/2f/ESPN_wordmark.svg"},
+{num:"004", nome:"CARTOON", id:"Cartoon.Network.br", logo:"https://images.weserv.nl/?url=upload.wikimedia.org/wikipedia/commons/8/80/Cartoon_Network_2010_logo.svg"},
+{num:"005", nome:"TNT", id:"TNT.br", logo:"https://images.weserv.nl/?url=upload.wikimedia.org/wikipedia/commons/2/24/TNT_Logo_2016.svg"}
 ];
 
-/* FUNÇÕES SEGURAS */
+/* ===== FUNÇÕES ===== */
 function parseDate(t){
+  if(!t) return 0;
   return new Date(
     t.substring(0,4),
     t.substring(4,6)-1,
@@ -91,10 +137,11 @@ function calc(start,stop){
 }
 
 function hora(t){
-  return t ? t.substring(8,10)+":"+t.substring(10,12) : "--:--";
+  if(!t) return "--:--";
+  return t.substring(8,10)+":"+t.substring(10,12);
 }
 
-/* LOAD */
+/* ===== LOAD EPG ===== */
 fetch(EPG_URL)
 .then(r=>r.text())
 .then(str=>new DOMParser().parseFromString(str,"text/xml"))
@@ -135,7 +182,8 @@ let prog = atual ? calc(atual.getAttribute("start"),atual.getAttribute("stop")) 
 /* HTML */
 box.innerHTML += `
 <div class="channel">
-<img class="logo" src="${c.logo}">
+<img class="logo" src="${c.logo}" onerror="this.style.display='none'">
+
 <div class="title">${c.num} - ${c.nome}</div>
 
 <div class="program">
@@ -160,14 +208,14 @@ console.log("Erro canal:",c.nome,e);
 
 });
 
-/* LOOP */
+/* ===== CARROSSEL INFINITO ===== */
 let index = 0;
 const total = canais.length;
 
 setInterval(()=>{
   index++;
   if(index >= total) index = 0;
-  box.style.transform = `translateX(-${index * 275}px)`;
+  box.style.transform = `translateX(-${index * 320}px)`;
 },4000);
 
 })
@@ -175,6 +223,7 @@ setInterval(()=>{
   document.body.innerHTML = "<h2 style='padding:20px'>Erro ao carregar EPG</h2>";
   console.error(err);
 });
+
 </script>
 
 </body>
