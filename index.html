@@ -1,1 +1,126 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>EPG LOCAL</title>
 
+<style>
+body { margin:0; font-family:Arial; background:#0b1220; color:#fff; }
+
+header {
+  background:#111b2e;
+  padding:10px;
+  display:flex;
+  justify-content:space-between;
+}
+
+#grid {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  grid-template-rows:repeat(3,1fr);
+  gap:10px;
+  padding:10px;
+  height:calc(100vh - 50px);
+}
+
+.card {
+  background:#162235;
+  padding:10px;
+  border-radius:8px;
+}
+
+.channel { color:#00d4ff; font-weight:bold; }
+.now { color:#00ff99; }
+.next { color:#aaa; font-size:12px; }
+</style>
+</head>
+
+<body>
+
+<header>
+<div>📺 EPG LOCAL</div>
+<div id="clock"></div>
+</header>
+
+<div id="grid"></div>
+
+<script>
+
+const epgUrl = "./epg.xml";
+
+const channels = [
+  { id: "ESPN.br", name: "ESPN HD" },
+  { id: "ESPN.2.br", name: "ESPN 2" },
+  { id: "Band.br", name: "BAND" },
+  { id: "Band.News.br", name: "BAND NEWS" },
+  { id: "CNN.International.br", name: "CNN BRASIL" },
+  { id: "Record.News.br", name: "RECORD NEWS" }
+];
+
+let epg = {};
+
+setInterval(()=>{
+document.getElementById("clock").innerText =
+new Date().toLocaleTimeString("pt-BR");
+},1000);
+
+async function load(){
+
+const res = await fetch(epgUrl);
+const xml = new DOMParser().parseFromString(await res.text(),"text/xml");
+
+const items = xml.getElementsByTagName("programme");
+
+epg = {};
+
+for(let i=0;i<items.length;i++){
+
+let ch = items[i].getAttribute("channel");
+let title = items[i].getElementsByTagName("title")[0]?.textContent || "";
+
+if(!epg[ch]) epg[ch] = [];
+
+epg[ch].push(title);
+}
+
+render();
+}
+
+function get(id){
+let list = epg[id];
+if(!list) return ["Sem info",""];
+return [list[0]||"", list[1]||""];
+}
+
+function render(){
+
+const grid = document.getElementById("grid");
+grid.innerHTML = "";
+
+channels.forEach(c=>{
+
+let [now,next] = get(c.id);
+
+const div = document.createElement("div");
+
+div.className="card";
+
+div.innerHTML=`
+<div class="channel">${c.name}</div>
+<div class="now">AGORA: ${now}</div>
+<div class="next">PRÓXIMO: ${next}</div>
+`;
+
+grid.appendChild(div);
+
+});
+
+}
+
+load();
+setInterval(load,300000);
+
+</script>
+
+</body>
+</html>
