@@ -2,307 +2,186 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Canal do Assinante - EPGshare01 Real</title>
+<title>Guia de Programação IPTV</title>
+
 <style>
-    :root {
-        --bg-primary: #0b0f1a;
-        --bg-card: #151f32;
-        --accent: #3b82f6;
-        --success: #10b981;
-        --text-main: #ffffff;
-        --text-muted: #9ca3af;
-    }
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #0b1220;
+    color: #fff;
+}
 
-    body {
-        margin: 0;
-        padding: 0;
-        background-color: var(--bg-primary);
-        font-family: 'Segoe UI', Roboto, Arial, sans-serif;
-        color: var(--text-main);
-        overflow: hidden; 
-    }
+header {
+    background: #111b2e;
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
 
-    .container {
-        max-width: 1400px;
-        margin: 0 auto;
-        padding: 25px;
-        height: 100vh;
-        box-sizing: border-box;
-        display: flex;
-        flex-direction: column;
-    }
+h1 {
+    font-size: 18px;
+    margin: 0;
+}
 
-    header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border-bottom: 2px solid #1e293b;
-        padding-bottom: 15px;
-        margin-bottom: 25px;
-    }
+#clock {
+    font-size: 14px;
+    color: #00ff99;
+}
 
-    h1 {
-        font-size: 28px;
-        margin: 0;
-        letter-spacing: 0.5px;
-    }
+#search {
+    padding: 8px;
+    width: 200px;
+    border-radius: 5px;
+    border: none;
+}
 
-    .status-panel {
-        display: flex;
-        gap: 15px;
-        align-items: center;
-    }
+.container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding: 10px;
+}
 
-    .counter-badge {
-        font-size: 14px;
-        padding: 6px 14px;
-        border-radius: 20px;
-        background: #1e293b;
-        color: var(--accent);
-        font-weight: bold;
-    }
+.channel {
+    background: #162235;
+    padding: 10px;
+    border-radius: 8px;
+}
 
-    .time-badge {
-        font-size: 22px;
-        font-weight: bold;
-        color: var(--success);
-        letter-spacing: 1px;
-    }
+.channel-title {
+    font-weight: bold;
+    margin-bottom: 8px;
+    color: #00d4ff;
+}
 
-    .epg-grid {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 25px;
-        flex-grow: 1;
-        align-content: start;
-    }
+.program {
+    font-size: 13px;
+    padding: 3px 0;
+    border-bottom: 1px solid #23324d;
+}
 
-    .card {
-        background: var(--bg-card);
-        border-radius: 16px;
-        padding: 25px;
-        border: 1px solid #1e293b;
-        border-left: 6px solid var(--accent);
-        box-sizing: border-box;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        min-height: 185px;
-        animation: transicaoSlide 0.5s ease-in-out;
-    }
-
-    .channel-info {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 10px;
-    }
-
-    .channel-name {
-        font-size: 22px;
-        font-weight: bold;
-        color: #f3f4f6;
-    }
-
-    .program-current {
-        font-size: 19px;
-        font-weight: bold;
-        color: var(--success);
-        margin-bottom: 6px;
-    }
-
-    .program-time {
-        font-size: 14px;
-        color: var(--text-muted);
-    }
-
-    .progress-container {
-        background: #1e293b;
-        height: 6px;
-        border-radius: 3px;
-        margin: 14px 0;
-        overflow: hidden;
-    }
-
-    .progress-bar {
-        background: var(--success);
-        height: 100%;
-        width: 0%;
-        transition: width 0.5s ease;
-    }
-
-    .program-next {
-        font-size: 15px;
-        color: var(--text-muted);
-        border-top: 1px solid #1e293b;
-        padding-top: 12px;
-    }
-
-    .next-label {
-        font-size: 11px;
-        text-transform: uppercase;
-        color: var(--accent);
-        display: block;
-        margin-bottom: 2px;
-        font-weight: bold;
-    }
-
-    .loading-msg {
-        grid-column: 1 / -1;
-        text-align: center;
-        padding: 60px;
-        font-size: 22px;
-        color: var(--text-muted);
-    }
-
-    @keyframes transicaoSlide {
-        from { opacity: 0; transform: translateY(12px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
+.now {
+    color: #00ff99;
+    font-weight: bold;
+}
 </style>
 </head>
+
 <body>
 
-<div class="container">
-    <header>
-        <h1>📺 CANAL DO ASSINANTE</h1>
-        <div class="status-panel">
-            <div class="counter-badge" id="page-info">Sincronizando...</div>
-            <div class="time-badge" id="live-clock">00:00:00</div>
-        </div>
-    </header>
+<header>
+    <h1>📺 Guia de Programação IPTV</h1>
+    <input id="search" placeholder="Buscar canal..." onkeyup="filterChannels()">
+    <div id="clock"></div>
+</header>
 
-    <main class="epg-grid" id="epg-container">
-        <div class="loading-msg" id="msg-status">Baixando e processando dados do epg_ripper_BR2...</div>
-    </main>
-</div>
+<div class="container" id="epg"></div>
 
 <script>
-// Configuração de Fontes e Caminhos Remotos
-const xmlUrlReal = "https://epgshare01.online/epgshare01/epg_ripper_BR2.xml";
-const proxyUrl = `https://allorigins.win{encodeURIComponent(xmlUrlReal)}`;
 
-// Lista de IDs exatos contidos no arquivo epg_ripper_BR2.xml fornecido
-const meusCanaisLista = [
-    "A&E.br", "AMC.br", "Animal.Planet.br", "Arte.1.br", "AXN.br", "Baby.TV.br", "Band.br", "Band.News.br", 
-    "Band.Sports.br", "BBC.World.News.br", "Bis.br", "Bloomberg.br", "Canal.21.br", "Canal.Brasil.br", 
-    "Canal.do.Boi.br", "Canal.Rural.br", "Cartoon.Network.br", "Cinemax.br", "CNN.International.br", 
-    "Combate.br", "Comedy.Central.br", "Deutsche.Welle.br", "Discovery.Channel.br", "Discovery.HD.Theater.br", 
-    "Discovery.Home.&amp;.Health.br", "Discovery.Kids.br", "Discovery.Science.br", "Discovery.Turbo.br", 
-    "Discovery.World.br", "E!.Entertainment.Television.br", "ESPN.2.br", "ESPN.3.br", "ESPN.4.br", 
-    "ESPN.5.br", "ESPN.br", "Eurochannel.br", "Film.&amp;.Arts.br", "Futura.br", "Globo.br", "Globo.News.br", 
-    "Gloob.br", "GNT.br", "HBO.2.br", "HBO.br", "HBO.Family.br", "HBO.Plus.br", "HBO.Signature.br", 
-    "History.Channel.br", "Lifetime.br", "Megapix.br", "MTV.br", "Multishow.br", "Nickelodeon.br", 
-    "Nick.Jr..br", "OFF.HD.br", "Paramount.Channel.br", "Premiere.Clubes.br", "RAI.International.br", 
-    "Record.News.br", "Record.TV.br", "Rede.Boa.Vontade.br", "Rede.TV.br", "Rede.Vida.br", "SBT.br", 
-    "SIC.International.br", "Sony.br", "SPACE.br", "SporTV.2.br", "SporTV.3.br", "SporTV.br", 
-    "Studio.Universal.br", "TBS.br", "TCM.-.Turner.Classic.br", "Telecine.Action.br", "Telecine.Cult.br", 
-    "Telecine.Fun.br", "Telecine.Pipoca.br", "Telecine.Premium.br", "Telecine.Touch.br", "TLC.br", 
-    "TNT.br", "TNT.S\u00C3\u00A9ries.br", "Tooncast.br", "Travel.Box.Brazil.br", "TV5.Monde.br", "TV.Aparecida.(aberta).br", 
-    "TV.Brasil.br", "TV.Cultura.br", "TV.Escola.br", "TV.Espanha.br", "TV.Gazeta.br", "TV.Justi\u00C3\u00A7a.br", 
-    "TV.Senado.br", "Universal.Channel.br", "Viva.br", "Warner.Channel.br", "Woohoo.br"
-];
+const epgUrl = "EPG.xml"; // <<< COLOQUE SUA URL DO GITHUB RAW AQUI
 
-let listaProgramasMestre = [];
-let ponteiroAtual = 0;
-const itensPorPagina = 4;
+let epgData = [];
 
-function atualizarRelogio() {
-    const agora = new Date();
-    document.getElementById("live-clock").textContent = agora.toLocaleTimeString('pt-BR');
+function updateClock() {
+    const now = new Date();
+    document.getElementById("clock").innerText =
+        now.toLocaleTimeString("pt-BR");
 }
+setInterval(updateClock, 1000);
+updateClock();
 
-function parseXMLTVDate(dateStr) {
-    if (!dateStr) return null;
-    let y = dateStr.slice(0, 4);
-    let m = dateStr.slice(4, 6) - 1;
-    let d = dateStr.slice(6, 8);
-    let h = dateStr.slice(8, 10);
-    let min = dateStr.slice(10, 12);
-    let s = dateStr.slice(12, 14) || "00";
-    return new Date(Date.UTC(y, m, d, h, min, s));
-}
+// carregar EPG XML
+async function loadEPG() {
+    const res = await fetch(epgUrl);
+    const text = await res.text();
 
-function formatarHora(date) {
-    if (!date) return "--:--";
-    return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-}
+    const parser = new DOMParser();
+    const xml = parser.parseFromString(text, "text/xml");
 
-function limparNomeExibicao(idStr) {
-    return idStr.replace(".br", "")
-                 .replace(/\./g, " ")
-                 .replace(/-/g, " ")
-                 .replace("S\u00C3\u00A9ries", "SERIES")
-                 .replace("Justi\u00C3\u00A7a", "JUSTICA")
-                 .replace("&amp;", "&")
-                 .toUpperCase();
-}
+    const channels = xml.getElementsByTagName("channel");
+    const programs = xml.getElementsByTagName("programme");
 
-function baixarDadosEpg() {
-    atualizarRelogio();
-    fetch(proxyUrl)
-        .then(res => {
-            if (!res.ok) throw new Error();
-            return res.json();
-        })
-        .then(jsonData => {
-            document.getElementById("msg-status").textContent = "Fatiando dados dos canais...";
-            
-            const parser = new DOMParser();
-            const xmlDoc = parser.parseFromString(jsonData.contents, "text/xml");
-            
-            // Armazena em cache na memória do navegador apenas a lista de nós de programas
-            listaProgramasMestre = Array.from(xmlDoc.querySelectorAll("programme"));
-            
-            document.getElementById("msg-status").style.display = 'none';
-            ponteiroAtual = 0;
-            
-            // Dispara o carrossel contínuo de exibição
-            renderizarProximaPagina();
-            setInterval(renderizarProximaPagina, 10000);
-        })
-        .catch(() => {
-            document.getElementById("epg-container").innerHTML = `
-                <div class="loading-msg" style="color:#ef4444;">
-                    Erro ao conectar com o servidor EPGshare01.<br>
-                    Certifique-se de que o link do XML está ativo. Nova tentativa em 30 segundos...
-                </div>`;
-            setTimeout(baixarDadosEpg, 30000);
-        });
-}
+    let data = {};
 
-function renderizarProximaPagina() {
-    if (listaProgramasMestre.length === 0) return;
+    // canais
+    for (let i = 0; i < channels.length; i++) {
+        let id = channels[i].getAttribute("id");
+        let name = channels[i].getElementsByTagName("display-name")[0].textContent;
+        data[id] = { name, programs: [] };
+    }
 
-    const agoraTime = new Date();
-    // Extrai o segmento de 4 IDs baseados na posição do ponteiro rotativo
-    const idsPaginaAtual = meusCanaisLista.slice(ponteiroAtual, ponteiroAtual + itensPorPagina);
-    
-    document.getElementById("page-info").textContent = `Canais ${ponteiroAtual + 1} - ${Math.min(ponteiroAtual + itensPorPagina, meusCanaisLista.length)} de ${meusCanaisLista.length}`;
+    // programas
+    for (let i = 0; i < programs.length; i++) {
+        let ch = programs[i].getAttribute("channel");
+        let title = programs[i].getElementsByTagName("title")[0].textContent;
+        let start = programs[i].getAttribute("start");
 
-    let html = "";
-
-    idsPaginaAtual.forEach(canalId => {
-        // Encontra cirurgicamente na memória os blocos de horário deste canal específico
-        let programasDoCanal = listaProgramasMestre.filter(p => p.getAttribute("channel") === canalId);
-        
-        let atual = null;
-        let prox = null;
-
-        for (let i = 0; i < programasDoCanal.length; i++) {
-            let start = parseXMLTVDate(programasDoCanal[i].getAttribute("start"));
-            let stop = parseXMLTVDate(programasDoCanal[i].getAttribute("stop"));
-
-            if (start && stop && agoraTime >= start && agoraTime <= stop) {
-                atual = programasDoCanal[i];
-                prox = programasDoCanal[i + 1] || null;
-                break;
-            }
+        if (data[ch]) {
+            data[ch].programs.push({ title, start });
         }
+    }
 
-        let atualTitulo = "Sem informação de programação";
-        let proxTitulo = "Sem informação";
-        let startReal = null;
-        let stopReal = null;
-        let progress = 0;
+    epgData = Object.values(data);
+    render();
+}
+
+function render(filter = "") {
+    const container = document.getElementById("epg");
+    container.innerHTML = "";
+
+    const now = new Date();
+
+    epgData.forEach(ch => {
+        if (filter && !ch.name.toLowerCase().includes(filter.toLowerCase())) return;
+
+        const div = document.createElement("div");
+        div.className = "channel";
+
+        let html = `<div class="channel-title">${ch.name}</div>`;
+
+        ch.programs.slice(0, 3).forEach(p => {
+            let start = parseTime(p.start);
+            let isNow = Math.abs(now - start) < 1000 * 60 * 60;
+
+            html += `<div class="program ${isNow ? 'now' : ''}">
+                        ${formatTime(start)} - ${p.title}
+                     </div>`;
+        });
+
+        div.innerHTML = html;
+        container.appendChild(div);
+    });
+}
+
+function parseTime(str) {
+    // formato XMLTV: 20260603120000 +0000
+    const y = str.substr(0,4);
+    const m = str.substr(4,2);
+    const d = str.substr(6,2);
+    const h = str.substr(8,2);
+    const min = str.substr(10,2);
+
+    return new Date(`${y}-${m}-${d}T${h}:${min}:00`);
+}
+
+function formatTime(date) {
+    return date.toLocaleTimeString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit"
+    });
+}
+
+function filterChannels() {
+    render(document.getElementById("search").value);
+}
+
+loadEPG();
+setInterval(loadEPG, 300000); // atualiza a cada 5 min
+
+</script>
+
+</body>
+</html>
