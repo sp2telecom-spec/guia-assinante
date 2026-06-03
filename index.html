@@ -2,51 +2,51 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>EPG IPTV PRO - TVG ID</title>
+<title>EPG IPTV PRO</title>
 
 <style>
 body {
-    margin: 0;
+    margin:0;
     font-family: Arial;
-    background: #0b1220;
-    color: #fff;
+    background:#0b1220;
+    color:#fff;
 }
 
 header {
-    background: #111b2e;
-    padding: 10px;
-    display: flex;
-    justify-content: space-between;
+    background:#111b2e;
+    padding:10px;
+    display:flex;
+    justify-content:space-between;
 }
 
 #grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: repeat(3, 1fr);
-    gap: 10px;
-    padding: 10px;
-    height: calc(100vh - 50px);
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    grid-template-rows:repeat(3,1fr);
+    gap:10px;
+    padding:10px;
+    height:calc(100vh - 50px);
 }
 
 .card {
-    background: #162235;
-    padding: 10px;
-    border-radius: 8px;
+    background:#162235;
+    padding:10px;
+    border-radius:8px;
 }
 
 .channel {
-    color: #00d4ff;
-    font-weight: bold;
+    color:#00d4ff;
+    font-weight:bold;
 }
 
 .now {
-    color: #00ff99;
-    font-size: 13px;
+    color:#00ff99;
+    font-size:13px;
 }
 
 .next {
-    color: #aaa;
-    font-size: 12px;
+    color:#aaa;
+    font-size:12px;
 }
 </style>
 </head>
@@ -54,7 +54,7 @@ header {
 <body>
 
 <header>
-<div>📺 EPG PRO TVG-ID</div>
+<div>📺 EPG PRO</div>
 <div id="clock"></div>
 </header>
 
@@ -62,25 +62,20 @@ header {
 
 <script>
 
-// ✔ EPG oficial correto
-const epgUrl = "https://epgshare01.online/epgshare01/epg_ripper_BR2.xml";
+// ✔ SEU EPG ORIGINAL
+const epgUrl = "http://200.98.168.231:8585/sat/IPTV/Guide_Correct.xml";
 
-// ✔ canais já com TVG-ID correto
+// ✔ canais (EXEMPLO - ajuste com seus tvg-id reais)
 const channels = [
   { id: "ESPN.br", name: "ESPN HD" },
   { id: "ESPN.2.br", name: "ESPN 2" },
-  { id: "ESPN.3.br", name: "ESPN 3" },
-  { id: "ESPN.4.br", name: "ESPN 4" },
-  { id: "ESPN.5.br", name: "ESPN 5" },
   { id: "Band.br", name: "BAND" },
   { id: "Band.News.br", name: "BAND NEWS" },
   { id: "CNN.International.br", name: "CNN BRASIL" },
-  { id: "Record.News.br", name: "RECORD NEWS" },
-  { id: "Cartoon.Network.br", name: "CARTOON NETWORK" },
-  { id: "Discovery.Channel.br", name: "DISCOVERY CHANNEL" },
-  { id: "TLC.br", name: "TLC HD" }
+  { id: "Record.News.br", name: "RECORD NEWS" }
 ];
 
+// ✔ EPG storage
 let epg = {};
 
 // relógio
@@ -89,74 +84,66 @@ document.getElementById("clock").innerText =
 new Date().toLocaleTimeString("pt-BR");
 },1000);
 
-// parse seguro
-function parse(t){
-if(!t) return "";
-return t;
+// fetch com PROXY (resolve CORS)
+async function loadEPG(){
+
+    const proxy = "https://api.allorigins.win/raw?url=";
+    const res = await fetch(proxy + encodeURIComponent(epgUrl));
+
+    const xmlText = await res.text();
+    const xml = new DOMParser().parseFromString(xmlText,"text/xml");
+
+    const items = xml.getElementsByTagName("programme");
+
+    epg = {};
+
+    for(let i=0;i<items.length;i++){
+
+        let ch = items[i].getAttribute("channel");
+        let title = items[i].getElementsByTagName("title")[0]?.textContent || "";
+
+        if(!epg[ch]) epg[ch] = [];
+
+        epg[ch].push(title);
+    }
+
+    render();
 }
 
-// carregar EPG
-async function load(){
-
-const res = await fetch(epgUrl);
-const xml = new DOMParser().parseFromString(await res.text(),"text/xml");
-
-const items = xml.getElementsByTagName("programme");
-
-epg = {};
-
-// ✔ index por TVG-ID (CORRETO)
-for(let i=0;i<items.length;i++){
-
-let ch = items[i].getAttribute("channel");
-let title = items[i].getElementsByTagName("title")[0]?.textContent || "";
-
-if(!epg[ch]) epg[ch] = [];
-
-epg[ch].push(title);
-}
-
-render();
-}
-
-// pegar programa correto
+// pegar programa
 function get(id){
-
-let list = epg[id];
-
-if(!list) return ["Sem info",""];
-
-return [list[0]||"", list[1]||""];
+    let list = epg[id];
+    if(!list) return ["Sem info",""];
+    return [list[0]||"", list[1]||""];
 }
 
-// render
+// render 3x2
 function render(){
 
-const grid = document.getElementById("grid");
-grid.innerHTML = "";
+    const grid = document.getElementById("grid");
+    grid.innerHTML = "";
 
-channels.slice(0,6).forEach(c=>{
+    channels.forEach(c=>{
 
-let [now,next] = get(c.id);
+        let [now,next] = get(c.id);
 
-const div = document.createElement("div");
+        const div = document.createElement("div");
 
-div.className="card";
+        div.className="card";
+        div.innerHTML=`
+            <div class="channel">${c.name}</div>
+            <div class="now">AGORA: ${now}</div>
+            <div class="next">PRÓXIMO: ${next}</div>
+        `;
 
-div.innerHTML=`
-<div class="channel">${c.name}</div>
-<div class="now">AGORA: ${now}</div>
-<div class="next">PRÓXIMO: ${next}</div>
-`;
-
-grid.appendChild(div);
-
-});
+        grid.appendChild(div);
+    });
 
 }
 
-load();
-setInterval(load,300000);
+// init
+loadEPG();
+setInterval(loadEPG,300000);
 
 </script>
 
