@@ -64,7 +64,10 @@ header {
 <script>
 
 // ✔ EPG oficial
-const epgUrl = "https://iptv-org.github.io/epg/guides/br.xml";
+const epgUrls = [
+  "https://iptv-org.github.io/epg/guides/br.xml",
+  "https://iptv-org.github.io/epg/guides/us.xml"
+];
 
 // seus canais
 const channels = [
@@ -108,23 +111,24 @@ function parseTime(t){
 // ======================
 async function loadEPG(){
 
-    const res = await fetch(epgUrl);
-    const xmlText = await res.text();
+    epg = {};
 
-    const xml = new DOMParser().parseFromString(xmlText,"text/xml");
-    const items = xml.getElementsByTagName("programme");
+    for(const url of epgUrls){
 
-    epgMap = {};
+        const res = await fetch(url);
+        const xml = new DOMParser().parseFromString(await res.text(),"text/xml");
 
-    for(let i=0;i<items.length;i++){
+        const items = xml.getElementsByTagName("programme");
 
-        let ch = items[i].getAttribute("channel");
-        let title = items[i].getElementsByTagName("title")[0]?.textContent || "";
-        let start = parseTime(items[i].getAttribute("start"));
+        for(let i=0;i<items.length;i++){
 
-        if(!epgMap[ch]) epgMap[ch] = [];
+            let ch = items[i].getAttribute("channel");
+            let title = items[i].getElementsByTagName("title")[0]?.textContent;
 
-        epgMap[ch].push({title,start});
+            if(!epg[ch]) epg[ch] = [];
+
+            epg[ch].push(title);
+        }
     }
 
     render();
