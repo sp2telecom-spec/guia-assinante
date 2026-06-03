@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Canal do Assinante - Guia EPG</title>
+<title>Canal do Assinante - Guia EPG Automático</title>
 <style>
     :root {
         --bg-primary: #0b0f1a;
@@ -20,7 +20,7 @@
         background-color: var(--bg-primary);
         font-family: 'Segoe UI', Roboto, Arial, sans-serif;
         color: var(--text-main);
-        overflow: hidden; /* Oculta rolagens para parecer tela de TV/Slide */
+        overflow: hidden; 
     }
 
     .container {
@@ -168,20 +168,18 @@
     <header>
         <h1>📺 CANAL DO ASSINANTE</h1>
         <div class="status-panel">
-            <div class="counter-badge" id="page-info">Lendo canais...</div>
+            <div class="counter-badge" id="page-info">Conectando...</div>
             <div class="time-badge" id="live-clock">00:00:00</div>
         </div>
     </header>
 
     <main class="epg-grid" id="epg-container">
-        <div class="msg-sistema">Carregando arquivo de programação local (dados_epg.xml)...</div>
+        <div class="msg-sistema" id="mensagem-status">Sincronizando guia digital com o servidor epg.pw...</div>
     </main>
 </div>
 
 <script>
-const nomeArquivoLocal = "dados_epg.xml";
-
-// Sua lista exata de canais para filtragem e exibição no painel
+// Lista estrita de IDs de canais fornecida para filtragem
 const meusCanaisLista = [
     "A&E.br", "AMC.br", "Animal.Planet.br", "Arte.1.br", "AXN.br", "Baby.TV.br", "Band.br", "Band.News.br", 
     "Band.Sports.br", "BBC.World.News.br", "Bis.br", "Bloomberg.br", "Canal.21.br", "Canal.Brasil.br", 
@@ -204,14 +202,22 @@ const meusCanaisLista = [
 
 let listaCanaisProcessados = [];
 let ponteiroAtual = 0;
-const itensPorPagina = 4; // Exibe 4 canais estilo slide por vez (2x2)
+const itensPorPagina = 4;
 
 function atualizarRelogio() {
     const agora = new Date();
     document.getElementById("live-clock").textContent = agora.toLocaleTimeString('pt-BR');
 }
 
-// Converte a string de data do XMLTV (Ex: 20260603120000 +0000) para um Objeto Date real
+// Formata a data atual no padrão YYYYMMDD exigido pelo epg.pw
+function obterDataFormatada() {
+    const agora = new Date();
+    const ano = agora.getFullYear();
+    const mes = String(agora.getMonth() + 1).padStart(2, '0');
+    const dia = String(agora.getDate()).padStart(2, '0');
+    return `${ano}${mes}${dia}`;
+}
+
 function parseXMLTVDate(dateStr) {
     if (!dateStr) return null;
     let y = dateStr.slice(0, 4);
@@ -229,26 +235,34 @@ function formatarHora(date) {
 }
 
 function limparNomeCanal(idStr) {
-    return idStr.replace(".br", "")
-                 .replace(/\./g, " ")
-                 .replace(/-/g, " ")
-                 .replace("  ", " ")
-                 .toUpperCase();
+    return idStr.replace(".br", "").replace(/\./g, " ").replace(/-/g, " ").replace("  ", " ").toUpperCase();
 }
 
-function carregarXMLLocal() {
-    fetch(nomeArquivoLocal)
+// Faz o download direto da API do epg.pw usando o proxy estável do allorigins
+function carregarEPGDaInternet() {
+    const dataAlvo = obterDataFormatada();
+    // Link direto do repositório unificado epg.pw para o Brasil
+    const urlOriginalEpg = `https://github.io`;
+    const urlComProxy = `https://allorigins.win{encodeURIComponent(urlOriginalEpg)}`;
+
+    document.getElementById("mensagem-status").textContent = "Baixando guia atualizado da internet...";
+
+    fetch(urlComProxy)
         .then(res => {
             if (!res.ok) throw new Error();
-            return res.text();
+            return res.json();
         })
-        .then(xmlTexto => processarXML(xmlTexto))
-        .catch(() => {
+        .then(jsonResponse => {
+            processarXML(jsonResponse.contents);
+        })
+        .catch(err => {
+            console.error(err);
             document.getElementById("epg-container").innerHTML = `
                 <div class="msg-sistema" style="color:#ef4444;">
-                    Erro: Não foi possível ler o arquivo "dados_epg.xml".<br>
-                    Verifique se ele está na mesma pasta deste HTML e se você está rodando o endereço em um servidor web (como o Live Server).
+                    Erro ao conectar com o servidor epg.pw.<br>
+                    O serviço pode estar em manutenção. Tentando reconectar automaticamente em instantes...
                 </div>`;
+            setTimeout(carregarEPGDaInternet, 30000);
         });
 }
 
@@ -259,14 +273,12 @@ function processarXML(xmlTexto) {
 
     listaCanaisProcessados = [];
 
-    // Filtra e agrupa os programas respeitando exatamente as regras da sua lista de IDs
     meusCanaisLista.forEach(canalId => {
         let progsCanal = xmlProgrammes.filter(p => {
             let pChan = p.getAttribute("channel");
             return pChan && pChan.trim().toLowerCase() === canalId.trim().toLowerCase();
         });
 
-        // Adiciona o canal à lista mestre do painel rotativo
         listaCanaisProcessados.push({
             id: canalId,
             nome: limparNomeCanal(canalId),
@@ -282,10 +294,8 @@ function renderizarProximoSlide() {
     if (listaCanaisProcessados.length === 0) return;
 
     const agoraTime = new Date();
-    // Separa os 4 canais correspondentes à rotação atual
-    const canaisExibidos = listaCanaisProcessados.slice(ponteiroAtual, ponteiroAtual + itensPorPagina);
+    const canaisExibidos = listaCanaisProcessados.slice(ponteiroAtual, pointerEnd = ponteiroAtual + itensPorPagina);
     
-    // Atualiza o contador de páginas no topo do slide
     document.getElementById("page-info").textContent = `Canais ${ponteiroAtual + 1} - ${Math.min(ponteiroAtual + itensPorPagina, listaCanaisProcessados.length)} de ${listaCanaisProcessados.length}`;
 
     let html = "";
@@ -294,7 +304,6 @@ function renderizarProximoSlide() {
         let atual = null;
         let prox = null;
 
-        // Varre a lista de programas para localizar o que está passando de acordo com o relógio
         for (let i = 0; i < canal.programas.length; i++) {
             let start = parseXMLTVDate(canal.programas[i].getAttribute("start"));
             let stop = parseXMLTVDate(canal.programas[i].getAttribute("stop"));
@@ -305,6 +314,7 @@ function renderizarProximoSlide() {
                 break;
             }
         }
+
 
         let atualTitulo = "Sem informação de programação";
         let proxTitulo = "Sem informação";
