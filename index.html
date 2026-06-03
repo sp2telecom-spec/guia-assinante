@@ -2,6 +2,198 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
+<title>EPG IPTV PRO</title>
+
+<style>
+body {
+    margin: 0;
+    font-family: Arial;
+    background: #0b1220;
+    color: #fff;
+}
+
+header {
+    background: #111b2e;
+    padding: 10px;
+    display: flex;
+    justify-content: space-between;
+}
+
+#grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: repeat(3, 1fr);
+    gap: 10px;
+    padding: 10px;
+    height: calc(100vh - 50px);
+}
+
+.card {
+    background: #162235;
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.channel {
+    color: #00d4ff;
+    font-weight: bold;
+}
+
+.now {
+    color: #00ff99;
+    font-size: 13px;
+}
+
+.next {
+    color: #aaa;
+    font-size: 12px;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+<div>📺 EPG SHARE PRO</div>
+<div id="clock"></div>
+</header>
+
+<div id="grid"></div>
+
+<script>
+
+// ✔ NOVA FONTE (boa e completa)
+const epgUrl = "https://epgshare01.online/epgshare01/epg_ripper_BR2.xml";
+
+// seus canais
+const channels = [
+"ESPN HD",
+"ESPN 2",
+"ESPN 3",
+"ESPN 4",
+"ESPN 5",
+"BAND",
+"BAND NEWS",
+"CNN BRASIL",
+"CNN INTERNACIONAL",
+"RECORD NEWS",
+"CARTOON NETWORK",
+"DISCOVERY CHANNEL",
+"DISCOVERY KIDS",
+"TLC HD",
+"AXN HD",
+"WARNER HD"
+];
+
+// ✔ MAPA REAL PARA EPG SHARE
+const map = {
+"ESPN HD":"ESPN.br",
+"ESPN 2":"ESPN.2.br",
+"ESPN 3":"ESPN.3.br",
+"ESPN 4":"ESPN.4.br",
+"ESPN 5":"ESPN.5.br",
+"BAND":"Band.br",
+"BAND NEWS":"Band.News.br",
+"CNN BRASIL":"CNN.International.br",
+"CNN INTERNACIONAL":"CNN.International.br",
+"RECORD NEWS":"Record.News.br",
+"CARTOON NETWORK":"Cartoon.Network.br",
+"DISCOVERY CHANNEL":"Discovery.Channel.br",
+"DISCOVERY KIDS":"Discovery.Kids.br",
+"TLC HD":"TLC.br",
+"AXN HD":"AXN.br",
+"WARNER HD":"Warner.Channel.br"
+};
+
+let epg = {};
+
+// relógio
+setInterval(()=>{
+document.getElementById("clock").innerText =
+new Date().toLocaleTimeString("pt-BR");
+},1000);
+
+// parse XML time
+function parse(t){
+if(!t) return new Date();
+return new Date(
+t.substr(0,4)+"-"+
+t.substr(4,2)+"-"+
+t.substr(6,2)+"T"+
+t.substr(8,2)+":"+
+t.substr(10,2)+":00"
+);
+}
+
+// carregar EPG
+async function load(){
+
+const res = await fetch(epgUrl);
+const xml = new DOMParser().parseFromString(await res.text(),"text/xml");
+
+const items = xml.getElementsByTagName("programme");
+
+epg = {};
+
+for(let i=0;i<items.length;i++){
+
+let ch = items[i].getAttribute("channel");
+let title = items[i].getElementsByTagName("title")[0]?.textContent || "";
+
+if(!epg[ch]) epg[ch] = [];
+
+epg[ch].push(title);
+}
+
+render();
+}
+
+// pegar programa
+function get(channel){
+
+let id = map[channel];
+let list = epg[id];
+
+if(!list) return ["Sem info",""];
+
+return [list[0]||"",list[1]||""];
+}
+
+// render grid
+function render(){
+
+const grid = document.getElementById("grid");
+grid.innerHTML = "";
+
+channels.slice(0,6).forEach(ch=>{
+
+let [now,next] = get(ch);
+
+const div = document.createElement("div");
+
+div.className="card";
+div.innerHTML=`
+<div class="channel">${ch}</div>
+<div class="now">AGORA: ${now}</div>
+<div class="next">PRÓXIMO: ${next}</div>
+`;
+
+grid.appendChild(div);
+
+});
+
+}
+
+load();
+setInterval(load,300000);
+
+</script>
+
+</body>
+</html><!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
 <title>Guia de Programação</title>
 
 <style>
