@@ -2,69 +2,69 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>Guia de Programação IPTV</title>
+<title>EPG Carrossel IPTV</title>
 
 <style>
 body {
     margin: 0;
-    font-family: Arial, sans-serif;
+    font-family: Arial;
     background: #0b1220;
     color: #fff;
 }
 
 header {
     background: #111b2e;
-    padding: 15px;
+    padding: 12px;
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
 
-h1 {
-    font-size: 18px;
-    margin: 0;
-}
-
 #clock {
-    font-size: 14px;
     color: #00ff99;
-}
-
-#search {
-    padding: 8px;
-    width: 200px;
-    border-radius: 5px;
-    border: none;
+    font-weight: bold;
 }
 
 .container {
     display: grid;
     grid-template-columns: 1fr 1fr;
+    grid-template-rows: repeat(3, 1fr);
     gap: 10px;
     padding: 10px;
+    height: calc(100vh - 60px);
+}
+
+.card {
+    background: #162235;
+    border-radius: 8px;
+    padding: 10px;
+    overflow: hidden;
 }
 
 .channel {
-    background: #162235;
-    padding: 10px;
-    border-radius: 8px;
-}
-
-.channel-title {
-    font-weight: bold;
-    margin-bottom: 8px;
     color: #00d4ff;
-}
-
-.program {
-    font-size: 13px;
-    padding: 3px 0;
-    border-bottom: 1px solid #23324d;
+    font-weight: bold;
+    font-size: 14px;
+    margin-bottom: 5px;
 }
 
 .now {
     color: #00ff99;
-    font-weight: bold;
+    font-size: 13px;
+}
+
+.next {
+    color: #aaa;
+    font-size: 12px;
+}
+
+.fade {
+    animation: fade 0.5s ease-in-out;
+}
+
+@keyframes fade {
+    from {opacity: 0.2;}
+    to {opacity: 1;}
 }
 </style>
 </head>
@@ -72,114 +72,142 @@ h1 {
 <body>
 
 <header>
-    <h1>📺 Guia de Programação IPTV</h1>
-    <input id="search" placeholder="Buscar canal..." onkeyup="filterChannels()">
+    <div>📺 Guia de Programação IPTV</div>
     <div id="clock"></div>
 </header>
 
-<div class="container" id="epg"></div>
+<div class="container" id="grid"></div>
 
 <script>
 
-const epgUrl = "EPG.xml"; // <<< COLOQUE SUA URL DO GITHUB RAW AQUI
+// ==============================
+// CONFIGURAÇÃO EPG
+// ==============================
+const epgUrl = "SEU_XMLTV_AQUI.xml";
 
-let epgData = [];
+// seus canais
+const channels = [
+"JOVEM PAN2","H&H HD","TLC HD","ARTE 1","BAND NEWS",
+"TV CAMARA","TV SENADO","TV ESCOLA","CANAL SAUDE","BAND",
+"RECORD NEWS","CNN BRASIL","CNN INTERNACIONAL","CNN ESPANHOL",
+"BAND SPORTS HD","FISH TV","BAND MAIS HD","EPTV SÃO CARLOS",
+"RBI","ESPN HD","ESPN 2","ESPN 3","ESPN 4","ESPN 5","ESPN 6 (ESPN EXTRA HD)",
+"CARTOON NETWORK","CARTOONITO","TOONCAST","RATIMBUM","DISCOVERY KIDS","REDE TV HD",
+"RECORD INTERIOR","TV CULTURA HD","UNIVESP","REDE ALESP","TV CAMARA SP",
+"REDE VIDA HD","REDE VIDA +","REDE VIDA EDUCAÇÃO",
+"DISCOVERY ID","DISCOVERY","DISCOVERY TURBO","DISCOVERY SCIENCE HD",
+"DISCOVERY THEATER HD","DISCOVERY WORLD HD",
+"WOOHOO","WARNER HD","SONY HD","SONY MOVIES","SPACE HD","CINE BRASIL",
+"TV APARECIDA","VTV SBT HD","MAIS FAMILIA HD","BOAS NOVAS",
+"CANAL DO BOI HD","AGRO CANAL HD","CANAL RURAL HD","TERRA VIVA","TCM",
+"ANIMAL PLANET HD","HISTORY HD","HISTORY 2 HD","HGTV","AXN HD","A&E HD",
+"TNT HD","TNT SERIES","LIFETIME HD","FASHION TV","MUSIC BOX HD","TNT NOVELA",
+"TRAVEL BOX","CHEF TV","CINEMAX","SABOR E ARTE","TOP FILM","ADULT SWIM",
+"TV LEME","AMC","PRIME BOX","CAZE TV"
+];
 
-function updateClock() {
-    const now = new Date();
+let epgData = {};
+let page = 0;
+const perPage = 6;
+
+// relógio
+function clock(){
     document.getElementById("clock").innerText =
-        now.toLocaleTimeString("pt-BR");
+    new Date().toLocaleTimeString("pt-BR");
 }
-setInterval(updateClock, 1000);
-updateClock();
+setInterval(clock,1000);
+clock();
 
-// carregar EPG XML
-async function loadEPG() {
-    const res = await fetch(epgUrl);
-    const text = await res.text();
+// ==============================
+// CARREGA EPG XMLTV
+// ==============================
+async function loadEPG(){
+    try {
+        const res = await fetch(epgUrl);
+        const text = await res.text();
 
-    const parser = new DOMParser();
-    const xml = parser.parseFromString(text, "text/xml");
+        const xml = new DOMParser().parseFromString(text,"text/xml");
+        const progs = xml.getElementsByTagName("programme");
 
-    const channels = xml.getElementsByTagName("channel");
-    const programs = xml.getElementsByTagName("programme");
+        epgData = {};
 
-    let data = {};
+        for(let i=0;i<progs.length;i++){
+            let ch = progs[i].getAttribute("channel");
+            let title = progs[i].getElementsByTagName("title")[0]?.textContent || "";
+            let start = progs[i].getAttribute("start");
 
-    // canais
-    for (let i = 0; i < channels.length; i++) {
-        let id = channels[i].getAttribute("id");
-        let name = channels[i].getElementsByTagName("display-name")[0].textContent;
-        data[id] = { name, programs: [] };
-    }
+            if(!epgData[ch]) epgData[ch] = [];
 
-    // programas
-    for (let i = 0; i < programs.length; i++) {
-        let ch = programs[i].getAttribute("channel");
-        let title = programs[i].getElementsByTagName("title")[0].textContent;
-        let start = programs[i].getAttribute("start");
-
-        if (data[ch]) {
-            data[ch].programs.push({ title, start });
+            epgData[ch].push({
+                title,
+                start: parseTime(start)
+            });
         }
+
+        render();
+    } catch(e){
+        console.log("Erro EPG",e);
     }
+}
 
-    epgData = Object.values(data);
+// converte horário XMLTV
+function parseTime(str){
+    if(!str) return new Date();
+    return new Date(
+        str.substr(0,4)+"-"+
+        str.substr(4,2)+"-"+
+        str.substr(6,2)+"T"+
+        str.substr(8,2)+":"+
+        str.substr(10,2)+":00"
+    );
+}
+
+// ==============================
+// RENDER GRID (6 canais)
+// ==============================
+function render(){
+
+    const grid = document.getElementById("grid");
+    grid.classList.add("fade");
+
+    setTimeout(()=>grid.classList.remove("fade"),500);
+
+    grid.innerHTML = "";
+
+    const start = page * perPage;
+    const slice = channels.slice(start,start+perPage);
+
+    slice.forEach(name=>{
+
+        const prog = epgData[name] || [];
+
+        const now = prog[0]?.title || "Sem informação";
+        const next = prog[1]?.title || "";
+
+        const card = document.createElement("div");
+        card.className = "card";
+
+        card.innerHTML = `
+            <div class="channel">${name}</div>
+            <div class="now">AGORA: ${now}</div>
+            <div class="next">PRÓXIMO: ${next}</div>
+        `;
+
+        grid.appendChild(card);
+    });
+
+    page++;
+    if(page * perPage >= channels.length) page = 0;
+}
+
+// auto carrossel 10s
+setInterval(()=>{
     render();
-}
+},10000);
 
-function render(filter = "") {
-    const container = document.getElementById("epg");
-    container.innerHTML = "";
-
-    const now = new Date();
-
-    epgData.forEach(ch => {
-        if (filter && !ch.name.toLowerCase().includes(filter.toLowerCase())) return;
-
-        const div = document.createElement("div");
-        div.className = "channel";
-
-        let html = `<div class="channel-title">${ch.name}</div>`;
-
-        ch.programs.slice(0, 3).forEach(p => {
-            let start = parseTime(p.start);
-            let isNow = Math.abs(now - start) < 1000 * 60 * 60;
-
-            html += `<div class="program ${isNow ? 'now' : ''}">
-                        ${formatTime(start)} - ${p.title}
-                     </div>`;
-        });
-
-        div.innerHTML = html;
-        container.appendChild(div);
-    });
-}
-
-function parseTime(str) {
-    // formato XMLTV: 20260603120000 +0000
-    const y = str.substr(0,4);
-    const m = str.substr(4,2);
-    const d = str.substr(6,2);
-    const h = str.substr(8,2);
-    const min = str.substr(10,2);
-
-    return new Date(`${y}-${m}-${d}T${h}:${min}:00`);
-}
-
-function formatTime(date) {
-    return date.toLocaleTimeString("pt-BR", {
-        hour: "2-digit",
-        minute: "2-digit"
-    });
-}
-
-function filterChannels() {
-    render(document.getElementById("search").value);
-}
-
+// init
 loadEPG();
-setInterval(loadEPG, 300000); // atualiza a cada 5 min
+setInterval(loadEPG,300000);
 
 </script>
 
