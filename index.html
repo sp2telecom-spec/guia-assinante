@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Canal do Assinante - EPG Real e Automático</title>
+<title>Canal do Assinante - EPG Real</title>
 <style>
     :root {
         --bg-primary: #0b0f1a;
@@ -141,14 +141,6 @@
         font-weight: bold;
     }
 
-    .loading-msg {
-        grid-column: 1 / -1;
-        text-align: center;
-        padding: 60px;
-        font-size: 22px;
-        color: var(--text-muted);
-    }
-
     @keyframes transicaoSlide {
         from { opacity: 0; transform: translateY(12px); }
         to { opacity: 1; transform: translateY(0); }
@@ -161,18 +153,16 @@
     <header>
         <h1>📺 CANAL DO ASSINANTE</h1>
         <div class="status-panel">
-            <div class="counter-badge" id="page-info">Conectando...</div>
+            <div class="counter-badge" id="page-info">Aguardando...</div>
             <div class="time-badge" id="live-clock">00:00:00</div>
         </div>
     </header>
 
-    <main class="epg-grid" id="epg-container">
-        <div class="loading-msg">Sincronizando canais ao vivo...</div>
-    </main>
+    <main class="epg-grid" id="epg-container"></main>
 </div>
 
 <script>
-// Mapeamento direto de IDs reais suportados pela API leve do epg.pw
+// Lista de canais oficial
 const listaCanaisMestre = [
     { nome: "A&E", id: "530053" }, { nome: "AMC", id: "542749" }, { nome: "ANIMAL PLANET", id: "530055" },
     { nome: "ARTE 1", id: "542750" }, { nome: "AXN", id: "530056" }, { nome: "BABY TV", id: "542751" },
@@ -222,42 +212,52 @@ function formatarHora(timestamp) {
     return new Date(timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
-// Faz requisições JSONP assíncronas em lote, burlando o CORS direto e sem travar a memória
-async function renderizarSlideAtual() {
+// Injeta os cards imediatamente para a tela nunca ficar em branco
+function montarEstruturaCards(canaisPagina) {
+    let html = "";
+    canaisPagina.forEach(canal => {
+        html += `
+        <div class="card" id="card_${canal.id}">
+            <div class="channel-name">${canal.nome}</div>
+            <div>
+                <div class="program-current" id="prog_atual_${canal.id}">Buscando programação...</div>
+                <div class="program-time" id="prog_hora_${canal.id}">🕒 --:-- - --:--</div>
+                <div class="progress-container">
+                    <div class="progress-bar" id="prog_barra_${canal.id}" style="width: 0%"></div>
+                </div>
+            </div>
+            <div class="program-next">
+                <span class="next-label">A Seguir</span>
+                <div id="prog_prox_${canal.id}">Carregando...</div>
+            </div>
+        </div>`;
+    });
+    document.getElementById("epg-container").innerHTML = html;
+}
+
+function renderizarSlideAtual() {
     const agora = new Date();
     const canaisPagina = listaCanaisMestre.slice(ponteiroAtual, ponteiroAtual + itensPorPagina);
     
     document.getElementById("page-info").textContent = `Canais ${ponteiroAtual + 1} - ${Math.min(ponteiroAtual + itensPorPagina, listaCanaisMestre.length)} de ${listaCanaisMestre.length}`;
     
-    let html = "";
-    
-    // Promessas paralelas para carregar as grades apenas dos 4 canais visíveis na tela
-    const promessas = canaisPagina.map(canal => {
-        return new Promise(resolve => {
-            const callbackName = `callback_epg_${canal.id}`;
-            
-            window[callbackName] = function(data) {
-                let atual = null;
-                let prox = null;
+    // Mostra os cards na tela imediatamente
+    montarEstruturaCards(canaisPagina);
 
-                if (data && data.programs) {
-                    for (let i = 0; i < data.programs.length; i++) {
-                        let pStart = new Date(data.programs[i].start);
-                        let pEnd = new Date(data.programs[i].end);
+    // Faz a consulta assíncrona canal por canal de forma isolada
+    canaisPagina.forEach(canal => {
+        const callbackName = `callback_epg_${canal.id}`;
+        
+        window[callbackName] = function(data) {
+            let atual = null;
+            let prox = null;
 
-                        if (agora >= pStart && agora <= pEnd) {
-                            atual = data.programs[i];
-                            prox = data.programs[i + 1] || null;
-                            break;
-                        }
-                    }
-                }
+            if (data && data.programs) {
+                for (let i = 0; i < data.programs.length; i++) {
+                    let pStart = new Date(data.programs[i].start);
+                    let pEnd = new Date(data.programs[i].end);
 
-                let tituloAtual = atual ? atual.title : "Sem informação de programação";
-                let tituloProx = prox ? prox.title : "Fim da programação registrada";
-                
-                let startReal = atual ? new Date(atual.start) : null;
-                let stopReal = atual ? new Date(atual.end) : null;
-                let progress = 0;
-
-                if (startReal && stopReal) {
+                    if (agora >= pStart && agora <= pEnd) {
+                        atual = data.programs[i];
+                        prox = data.programs[i + 1] || null;
+                        break;
