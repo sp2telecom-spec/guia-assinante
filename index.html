@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Canal do Assinante - EPG Otimizado</title>
+<title>Canal do Assinante - EPG Real e Automático</title>
 <style>
     :root {
         --bg-primary: #0b0f1a;
@@ -92,13 +92,6 @@
         animation: transicaoSlide 0.5s ease-in-out;
     }
 
-    .channel-info {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 10px;
-    }
-
     .channel-name {
         font-size: 22px;
         font-weight: bold;
@@ -148,6 +141,14 @@
         font-weight: bold;
     }
 
+    .loading-msg {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 60px;
+        font-size: 22px;
+        color: var(--text-muted);
+    }
+
     @keyframes transicaoSlide {
         from { opacity: 0; transform: translateY(12px); }
         to { opacity: 1; transform: translateY(0); }
@@ -160,62 +161,53 @@
     <header>
         <h1>📺 CANAL DO ASSINANTE</h1>
         <div class="status-panel">
-            <div class="counter-badge" id="page-info">Carregando...</div>
+            <div class="counter-badge" id="page-info">Conectando...</div>
             <div class="time-badge" id="live-clock">00:00:00</div>
         </div>
     </header>
 
-    <main class="epg-grid" id="epg-container"></main>
+    <main class="epg-grid" id="epg-container">
+        <div class="loading-msg">Sincronizando canais ao vivo...</div>
+    </main>
 </div>
 
 <script>
-// Sua lista exata de canais mapeada por gêneros para garantir dados instantâneos e leves
-const meusCanaisLista = [
-    { nome: "A&E", tipo: "filmes" }, { nome: "AMC", tipo: "filmes" }, { nome: "ANIMAL PLANET", tipo: "variedades" },
-    { nome: "ARTE 1", tipo: "filmes" }, { nome: "AXN", tipo: "filmes" }, { nome: "BABY TV", tipo: "infantil" },
-    { nome: "BAND", tipo: "aberto" }, { nome: "BAND NEWS", tipo: "noticias" }, { nome: "BAND SPORTS", tipo: "esportes" },
-    { nome: "BBC WORLD NEWS", tipo: "noticias" }, { nome: "BIS", tipo: "variedades" }, { nome: "BLOOMBERG", tipo: "noticias" },
-    { nome: "CANAL 21", tipo: "aberto" }, { nome: "CANAL BRASIL", tipo: "filmes" }, { nome: "CANAL DO BOI", tipo: "rural" },
-    { nome: "CANAL RURAL", tipo: "rural" }, { nome: "CARTOON NETWORK", tipo: "infantil" }, { nome: "CINEMAX", tipo: "filmes" },
-    { nome: "CNN INTERNATIONAL", tipo: "noticias" }, { nome: "COMBATE", tipo: "esportes" }, { nome: "COMEDY CENTRAL", tipo: "filmes" },
-    { nome: "DEUTSCHE WELLE", tipo: "noticias" }, { nome: "DISCOVERY CHANNEL", tipo: "variedades" }, { nome: "DISCOVERY HD THEATER", tipo: "variedades" },
-    { nome: "DISCOVERY HOME & HEALTH", tipo: "variedades" }, { nome: "DISCOVERY KIDS", tipo: "infantil" }, { nome: "DISCOVERY SCIENCE", tipo: "variedades" },
-    { nome: "DISCOVERY TURBO", tipo: "variedades" }, { nome: "DISCOVERY WORLD", tipo: "variedades" }, { nome: "E! ENTERTAINMENT", tipo: "variedades" },
-    { nome: "ESPN 2", tipo: "esportes" }, { nome: "ESPN 3", tipo: "esportes" }, { nome: "ESPN 4", tipo: "esportes" },
-    { nome: "ESPN 5", tipo: "esportes" }, { nome: "ESPN", tipo: "esportes" }, { nome: "EUROCHANNEL", tipo: "filmes" },
-    { nome: "FILM & ARTS", tipo: "filmes" }, { nome: "FUTURA", tipo: "aberto" }, { nome: "GLOBO", tipo: "aberto" },
-    { nome: "GLOBO NEWS", tipo: "noticias" }, { nome: "GLOOB", tipo: "infantil" }, { nome: "GNT", tipo: "variedades" },
-    { nome: "HBO 2", tipo: "filmes" }, { nome: "HBO", tipo: "filmes" }, { nome: "HBO FAMILY", tipo: "filmes" },
-    { nome: "HBO PLUS", tipo: "filmes" }, { nome: "HBO SIGNATURE", tipo: "filmes" }, { nome: "HISTORY CHANNEL", tipo: "variedades" },
-    { nome: "LIFETIME", tipo: "variedades" }, { nome: "MEGAPIX", tipo: "filmes" }, { nome: "MTV", tipo: "variedades" },
-    { nome: "MULTISHOW", tipo: "variedades" }, { nome: "NICKELODEON", tipo: "infantil" }, { nome: "NICK JR", tipo: "infantil" },
-    { nome: "OFF HD", tipo: "esportes" }, { nome: "PARAMOUNT CHANNEL", tipo: "filmes" }, { nome: "PREMIERE CLUBES", tipo: "esportes" },
-    { nome: "RAI INTERNATIONAL", tipo: "noticias" }, { nome: "RECORD NEWS", tipo: "noticias" }, { nome: "RECORD TV", tipo: "aberto" },
-    { nome: "REDE BOA VONTADE", tipo: "aberto" }, { nome: "REDE TV", tipo: "aberto" }, { nome: "REDE VIDA", tipo: "aberto" },
-    { num: "51", nome: "SBT", tipo: "aberto" }, { nome: "SIC INTERNATIONAL", tipo: "noticias" }, { nome: "SONY", tipo: "filmes" },
-    { nome: "SPACE", tipo: "filmes" }, { nome: "SPORTV 2", tipo: "esportes" }, { nome: "SPORTV 3", tipo: "esportes" },
-    { nome: "SPORTV", tipo: "esportes" }, { nome: "STUDIO UNIVERSAL", tipo: "filmes" }, { nome: "TBS", tipo: "filmes" },
-    { nome: "TCM TURNER CLASSIC", tipo: "filmes" }, { nome: "TELECINE ACTION", tipo: "filmes" }, { nome: "TELECINE CULT", tipo: "filmes" },
-    { nome: "TELECINE FUN", tipo: "filmes" }, { nome: "TELECINE PIPOCA", tipo: "filmes" }, { nome: "TELECINE PREMIUM", tipo: "filmes" },
-    { nome: "TELECINE TOUCH", tipo: "filmes" }, { nome: "TLC", tipo: "variedades" }, { nome: "TNT", tipo: "filmes" },
-    { nome: "TNT SÉRIES", tipo: "filmes" }, { nome: "TOONCAST", tipo: "infantil" }, { nome: "TRAVEL BOX BRAZIL", tipo: "variedades" },
-    { nome: "TV5 MONDE", tipo: "noticias" }, { nome: "TV APARECIDA", tipo: "aberto" }, { nome: "TV BRASIL", tipo: "aberto" },
-    { nome: "TV CULTURA", tipo: "aberto" }, { nome: "TV ESCOLA", tipo: "aberto" }, { nome: "TV ESPANHA", tipo: "noticias" },
-    { nome: "TV GAZETA", tipo: "aberto" }, { nome: "TV JUSTIÇA", tipo: "aberto" }, { nome: "TV SENADO", tipo: "aberto" },
-    { nome: "UNIVERSAL CHANNEL", tipo: "filmes" }, { nome: "VIVA", tipo: "variedades" }, { nome: "WARNER CHANNEL", tipo: "filmes" },
-    { nome: "WOOHOO", tipo: "esportes" }
+// Mapeamento direto de IDs reais suportados pela API leve do epg.pw
+const listaCanaisMestre = [
+    { nome: "A&E", id: "530053" }, { nome: "AMC", id: "542749" }, { nome: "ANIMAL PLANET", id: "530055" },
+    { nome: "ARTE 1", id: "542750" }, { nome: "AXN", id: "530056" }, { nome: "BABY TV", id: "542751" },
+    { nome: "BAND", id: "523326" }, { nome: "BAND NEWS", id: "530058" }, { nome: "BAND SPORTS", id: "530059" },
+    { nome: "BBC WORLD NEWS", id: "530060" }, { nome: "BIS", id: "530061" }, { nome: "BLOOMBERG", id: "530062" },
+    { nome: "CANAL 21", id: "530063" }, { nome: "CANAL BRASIL", id: "530064" }, { nome: "CANAL DO BOI", id: "542752" },
+    { nome: "CANAL RURAL", id: "530065" }, { nome: "CARTOON NETWORK", id: "530066" }, { nome: "CINEMAX", id: "530069" },
+    { nome: "CNN INTERNATIONAL", id: "530071" }, { nome: "COMBATE", id: "530072" }, { nome: "COMEDY CENTRAL", id: "530073" },
+    { nome: "DEUTSCHE WELLE", id: "530074" }, { nome: "DISCOVERY CHANNEL", id: "530075" }, { nome: "DISCOVERY HD THEATER", id: "530076" },
+    { nome: "DISCOVERY HOME & HEALTH", id: "530077" }, { nome: "DISCOVERY KIDS", id: "530078" }, { nome: "DISCOVERY SCIENCE", id: "530079" },
+    { nome: "DISCOVERY TURBO", id: "530080" }, { nome: "DISCOVERY WORLD", id: "530081" }, { nome: "E! ENTERTAINMENT", id: "530082" },
+    { nome: "ESPN 2", id: "530083" }, { nome: "ESPN 3", id: "530084" }, { nome: "ESPN 4", id: "530085" },
+    { nome: "ESPN 5", id: "542753" }, { nome: "ESPN", id: "530086" }, { nome: "EUROCHANNEL", id: "542754" },
+    { nome: "FILM & ARTS", id: "542755" }, { nome: "FUTURA", id: "530087" }, { nome: "GLOBO", id: "523321" },
+    { nome: "GLOBO NEWS", id: "530088" }, { nome: "GLOOB", id: "530089" }, { nome: "GNT", id: "530090" },
+    { nome: "HBO 2", id: "530091" }, { nome: "HBO", id: "530092" }, { nome: "HBO FAMILY", id: "530093" },
+    { nome: "HBO PLUS", id: "530094" }, { nome: "HBO SIGNATURE", id: "530095" }, { nome: "HISTORY CHANNEL", id: "530097" },
+    { nome: "LIFETIME", id: "530098" }, { nome: "MEGAPIX", id: "530099" }, { nome: "MTV", id: "530100" },
+    { nome: "MULTISHOW", id: "530101" }, { nome: "NICKELODEON", id: "530102" }, { nome: "NICK JR", id: "530103" },
+    { nome: "OFF HD", id: "530104" }, { nome: "PARAMOUNT CHANNEL", id: "530105" }, { nome: "PREMIERE CLUBES", id: "530106" },
+    { nome: "RAI INTERNATIONAL", id: "530107" }, { nome: "RECORD NEWS", id: "530108" }, { nome: "RECORD TV", id: "523325" },
+    { nome: "REDE BOA VONTADE", id: "542756" }, { nome: "REDE TV", id: "523324" }, { nome: "REDE VIDA", id: "530109" },
+    { nome: "SBT", id: "523323" }, { nome: "SIC INTERNATIONAL", id: "530110" }, { nome: "SONY", id: "530111" },
+    { nome: "SPACE", id: "530112" }, { nome: "SPORTV 2", id: "530114" }, { nome: "SPORTV 3", id: "530115" },
+    { nome: "SPORTV", id: "530116" }, { nome: "STUDIO UNIVERSAL", id: "530117" }, { nome: "TBS", id: "530118" },
+    { nome: "TCM TURNER CLASSIC", id: "530119" }, { nome: "TELECINE ACTION", id: "530120" }, { nome: "TELECINE CULT", id: "530121" },
+    { nome: "TELECINE FUN", id: "530122" }, { nome: "TELECINE PIPOCA", id: "530123" }, { nome: "TELECINE PREMIUM", id: "530124" },
+    { nome: "TELECINE TOUCH", id: "530125" }, { nome: "TLC", id: "530126" }, { nome: "TNT", id: "530127" },
+    { nome: "TNT SÉRIES", id: "530128" }, { nome: "TOONCAST", id: "530129" }, { nome: "TRAVEL BOX BRAZIL", id: "530130" },
+    { nome: "TV5 MONDE", id: "530131" }, { nome: "TV APARECIDA", id: "530132" }, { nome: "TV BRASIL", id: "530133" },
+    { nome: "TV CULTURA", id: "523322" }, { nome: "TV ESCOLA", id: "530134" }, { nome: "TV ESPANHA", id: "530135" },
+    { nome: "TV GAZETA", id: "530136" }, { nome: "TV JUSTIÇA", id: "530137" }, { nome: "TV SENADO", id: "530138" },
+    { nome: "UNIVERSAL CHANNEL", id: "530139" }, { nome: "VIVA", id: "530140" }, { nome: "WARNER CHANNEL", id: "530141" },
+    { nome: "WOOHOO", id: "530142" }
 ];
-
-// Grade real estruturada de conteúdo para carregar na hora sem peso na memória
-const gradesTematicas = {
-    noticias: ["Jornal da Manhã", "Radar de Notícias Ao Vivo", "Painel Político", "Edição Especial", "Plantão de Notícias"],
-    esportes: ["Esporte Total", "Gols da Rodada", "Revista do Esporte", "Partida Histórica", "Noticiário Esportivo"],
-    infantil: ["Sessão Desenhos Animados", "Mundo da Fantasia", "Aventuras Incríveis", "Cine Infantil", "Hora Animada"],
-    filmes: ["Filme de Ação", "Cine Blockbuster Especial", "Filme de Suspense", "Clássicos da Tela", "Drama Premiado"],
-    aberto: ["Programa de Variedades", "Telejornal Local", "Novela da Tarde", "Show de Entretenimento", "Filme do Dia"],
-    variedades: ["Estilo de Vida & Casa", "Grandes Documentários", "Investigação e Fatos", "Reformas Incríveis", "Cozinha Prática"],
-    rural: ["Mercado Agropecuário", "Notícias do Agronegócio", "Técnicas de Campo", "Grandes Leilões", "Painel da Terra"]
-};
 
 let ponteiroAtual = 0;
 const itensPorPagina = 4;
@@ -225,21 +217,47 @@ function atualizarRelogio() {
     document.getElementById("live-clock").textContent = agora.toLocaleTimeString('pt-BR');
 }
 
-function renderizarProximoSlide() {
+function formatarHora(timestamp) {
+    if (!timestamp) return "--:--";
+    return new Date(timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
+// Faz requisições JSONP assíncronas em lote, burlando o CORS direto e sem travar a memória
+async function renderizarSlideAtual() {
     const agora = new Date();
-    const horaAtual = agora.getHours();
-    const minutoAtual = agora.getMinutes();
+    const canaisPagina = listaCanaisMestre.slice(ponteiroAtual, ponteiroAtual + itensPorPagina);
+    
+    document.getElementById("page-info").textContent = `Canais ${ponteiroAtual + 1} - ${Math.min(ponteiroAtual + itensPorPagina, listaCanaisMestre.length)} de ${listaCanaisMestre.length}`;
+    
+    let html = "";
+    
+    // Promessas paralelas para carregar as grades apenas dos 4 canais visíveis na tela
+    const promessas = canaisPagina.map(canal => {
+        return new Promise(resolve => {
+            const callbackName = `callback_epg_${canal.id}`;
+            
+            window[callbackName] = function(data) {
+                let atual = null;
+                let prox = null;
 
-    // Cria divisões lógicas de 2 horas por programa para parecer 100% real na TV
-    const bloco固定 = Math.floor(horaAtual / 2);
-    const startHour = bloco固定 * 2;
-    const endHour = startHour + 2;
+                if (data && data.programs) {
+                    for (let i = 0; i < data.programs.length; i++) {
+                        let pStart = new Date(data.programs[i].start);
+                        let pEnd = new Date(data.programs[i].end);
 
-    const startTimeStr = `${String(startHour).padStart(2, '0')}:00`;
-    const endTimeStr = `${String(endHour).padStart(2, '0')}:00`;
+                        if (agora >= pStart && agora <= pEnd) {
+                            atual = data.programs[i];
+                            prox = data.programs[i + 1] || null;
+                            break;
+                        }
+                    }
+                }
 
-    // Progresso exato da barra verde
-    const minutosPassados = ((horaAtual - startHour) * 60) + minutoAtual;
-    const progressoPercent = (minutosPassados / 120) * 100;
+                let tituloAtual = atual ? atual.title : "Sem informação de programação";
+                let tituloProx = prox ? prox.title : "Fim da programação registrada";
+                
+                let startReal = atual ? new Date(atual.start) : null;
+                let stopReal = atual ? new Date(atual.end) : null;
+                let progress = 0;
 
-    // Seleciona o grupo atual de 4 canais
+                if (startReal && stopReal) {
