@@ -15,14 +15,16 @@ html, body{
   color:#fff;
 }
 
+/* TOPO (hora + clima) */
 header{
   position:absolute;
   top:20px;
   left:40px;
-  font-size:32px;
+  font-size:34px;
   font-weight:bold;
 }
 
+/* CARROSSEL */
 #carousel{
   display:flex;
   gap:20px;
@@ -32,37 +34,44 @@ header{
   transition:transform .6s ease;
 }
 
+/* CARD CANAL */
 .channel{
   min-width:300px;
   height:280px;
   background:rgba(20,20,28,0.85);
   border-radius:14px;
   padding:15px;
+  box-shadow:0 0 15px rgba(0,0,0,0.4);
 }
 
+/* LOGO */
 .logo{
   width:100%;
   height:45px;
   object-fit:contain;
 }
 
+/* TITULO */
 .title{
   font-size:17px;
   font-weight:bold;
   margin-top:8px;
 }
 
+/* PROGRAMA ATUAL */
 .program{
   font-size:14px;
   margin-top:6px;
 }
 
+/* PROXIMO */
 .next{
   font-size:12px;
   opacity:.7;
   margin-top:8px;
 }
 
+/* BARRA */
 .progress{
   height:6px;
   background:#333;
@@ -87,26 +96,18 @@ header{
 
 const EPG_URL = "dados_epg.xml";
 
-/* ===== CANAIS ===== */
+/* ===== LISTA DE CANAIS ===== */
 const canais = [
 {num:"01.1", nome:"JOVEM PAN", id:"JovemPan.br", logo:"https://upload.wikimedia.org/wikipedia/commons/4/41/Logotipo_da_TV_Jovem_Pan_News.png"},
 {num:"01.3", nome:"H&H HD", id:"Discovery.HH.br", logo:"https://upload.wikimedia.org/wikipedia/commons/9/90/Discovery_H%26H_Logo_2022.webp"},
 {num:"01.4", nome:"TLC HD", id:"TLC.br", logo:"https://upload.wikimedia.org/wikipedia/commons/7/74/TLC_Logo.svg"},
 {num:"01.5", nome:"ARTE 1", id:"Arte1.br", logo:"https://upload.wikimedia.org/wikipedia/commons/3/31/Arte_1_logo.svg"},
 {num:"01.6", nome:"BAND NEWS", id:"BandNews.br", logo:"https://upload.wikimedia.org/wikipedia/commons/c/ce/BandNewsTV2024.svg"},
-
-{num:"02.1", nome:"TV CAMARA", id:"TVCamara.br", logo:"https://upload.wikimedia.org/wikipedia/commons/8/8e/Marca_TV_C%C3%A2mara_-_2018.png"},
-{num:"02.2", nome:"TV SENADO", id:"TVSenado.br", logo:"https://upload.wikimedia.org/wikipedia/commons/3/3f/TV_Senado_logo_%281996%E2%80%932016%29.png"},
-{num:"02.4", nome:"TV ESCOLA", id:"TVEscola.br", logo:"https://upload.wikimedia.org/wikipedia/commons/b/b5/TV_Escola.png"},
-{num:"02.5", nome:"CANAL SAUDE", id:"CanalSaude.br", logo:"https://acervo.canalsaude.fiocruz.br/tools/images/logo-topMaior.jpg"},
-{num:"02.6", nome:"BAND", id:"Band.br", logo:"https://upload.wikimedia.org/wikipedia/commons/2/2b/Rede_Bandeirantes_logo_2018.svg"},
-
-{num:"03.1", nome:"RECORD NEWS", id:"Record.News.br", logo:"https://upload.wikimedia.org/wikipedia/commons/4/46/Record_News_logo_2023.svg"},
 {num:"03.2", nome:"CNN BRASIL", id:"CNNBrasil.br", logo:"https://upload.wikimedia.org/wikipedia/commons/8/8b/CNN_Brasil_%28red_background%29.svg"}
 ];
 
 /* ===== RELÓGIO + CLIMA ===== */
-let climaTexto = "Carregando clima...";
+let climaTexto = "Carregando...";
 
 function atualizarRelogio(){
   const agora = new Date();
@@ -126,18 +127,19 @@ function atualizarClima(){
   fetch("https://wttr.in/Campinas?format=1")
   .then(r => r.text())
   .then(txt => {
-  // exemplo original: "Campinas: ☀️ +25°C"
-  
-  let partes = txt.split(":");
 
-  if(partes.length > 1){
-    climaTexto = partes[1]
-      .replace("+","")
-      .trim(); // "☀️ 25°C"
-  } else {
-    climaTexto = txt;
-  }
-})
+    let partes = txt.split(":");
+
+    if(partes.length > 1){
+      climaTexto = partes[1]
+        .replace("+","")
+        .replace("°C","°")
+        .trim();
+    } else {
+      climaTexto = txt;
+    }
+
+  })
   .catch(()=> climaTexto = "Clima indisponível");
 }
 
@@ -147,7 +149,8 @@ setInterval(atualizarClima,600000);
 atualizarRelogio();
 atualizarClima();
 
-/* ===== EPG ===== */
+/* ===== FUNÇÕES EPG ===== */
+
 function parseDate(t){
   if(!t) return 0;
 
@@ -176,6 +179,8 @@ function hora(t){
   return d.getHours().toString().padStart(2,"0") + ":" +
          d.getMinutes().toString().padStart(2,"0");
 }
+
+/* ===== CARREGAR EPG ===== */
 
 function carregarEPG(xml){
 
@@ -210,6 +215,7 @@ let prog = atual ? calc(atual.getAttribute("start"),atual.getAttribute("stop")) 
 
 box.innerHTML += `
 <div class="channel">
+
 <img class="logo" src="${c.logo}" onerror="this.style.display='none'">
 
 <div class="title">${c.num} - ${c.nome}</div>
@@ -233,6 +239,8 @@ ${titulo}
 });
 }
 
+/* ===== ATUALIZAÇÃO AUTOMÁTICA ===== */
+
 function atualizar(){
 fetch(EPG_URL)
 .then(r=>r.text())
@@ -244,7 +252,8 @@ fetch(EPG_URL)
 atualizar();
 setInterval(atualizar, 60000);
 
-/* CARROSSEL */
+/* ===== CARROSSEL ===== */
+
 let index = 0;
 
 setInterval(()=>{
