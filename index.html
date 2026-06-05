@@ -11,7 +11,7 @@ html, body{
   margin:0;
   padding:0;
   overflow:hidden;
-  background:#0b0b0f;
+  background:transparent; /* TRANSPARENTE */
   font-family:Arial, sans-serif;
   color:#fff;
 }
@@ -21,12 +21,22 @@ body{
   flex-direction:column;
 }
 
+/* HEADER COM RELÓGIO */
 header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
   padding:25px 40px;
   font-size:32px;
   font-weight:bold;
 }
 
+#clock{
+  font-size:26px;
+  opacity:0.9;
+}
+
+/* CARROSSEL */
 #carousel{
   display:flex;
   gap:20px;
@@ -37,7 +47,7 @@ header{
 .channel{
   min-width:300px;
   height:280px;
-  background:#14141c;
+  background:rgba(20,20,28,0.85); /* leve transparência */
   border-radius:14px;
   padding:15px;
   box-shadow:0 0 20px rgba(0,0,0,0.4);
@@ -76,14 +86,18 @@ header{
 
 .bar{
   height:100%;
-  background:#e50914;
+  background:#ff0000; /* vermelho */
 }
 </style>
 </head>
 
 <body>
 
-<header>📺 Guia de Programação</header>
+<header>
+  <div>📺 Guia de Programação</div>
+  <div id="clock"></div>
+</header>
+
 <div id="carousel"></div>
 
 <script>
@@ -99,6 +113,19 @@ const canais = [
 {num:"09.1", nome:"CARTOON", id:"Cartoon.Network.br", logo:"https://images.weserv.nl/?url=upload.wikimedia.org/wikipedia/commons/8/80/Cartoon_Network_2010_logo.svg"},
 {num:"55.1", nome:"TNT", id:"TNT.br", logo:"https://images.weserv.nl/?url=upload.wikimedia.org/wikipedia/commons/2/24/TNT_Logo_2016.svg"}
 ];
+
+/* ===== RELÓGIO (FUSO SP) ===== */
+function atualizarRelogio(){
+  const agora = new Date().toLocaleTimeString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit"
+  });
+  document.getElementById("clock").innerText = agora;
+}
+setInterval(atualizarRelogio,1000);
+atualizarRelogio();
 
 /* FUNÇÕES */
 function parseDate(t){
@@ -131,9 +158,7 @@ function carregarEPG(xml){
 const progs = [...xml.querySelectorAll("programme")];
 const box = document.getElementById("carousel");
 
-/* mantém posição do carrossel */
 const posAtual = box.style.transform;
-
 box.innerHTML = "";
 
 canais.forEach(c=>{
@@ -184,7 +209,6 @@ ${titulo}
 
 });
 
-/* restaura posição */
 box.style.transform = posAtual;
 }
 
@@ -197,10 +221,7 @@ fetch(EPG_URL)
 .catch(err=>console.log("Erro EPG", err));
 }
 
-/* PRIMEIRA CARGA */
 atualizar();
-
-/* ATUALIZA A CADA 60s */
 setInterval(atualizar, 60000);
 
 /* CARROSSEL */
