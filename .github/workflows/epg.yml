@@ -13,43 +13,49 @@ jobs:
       - name: Clonar repositório
         uses: actions/checkout@v4
 
-      - name: Baixar EPG (com fallback + retry)
+      - name: Baixar EPG (com retry)
         run: |
           set -e
 
-          URL1="https://epgshare01.online/epgshare01/epg_ripper_BG1.xml.gz"
-          URL2="https://epgshare01.online/epgshare01/epg_ripper_BR1.xml.gz"
+          URL="https://epgshare01.online/epgshare01/epg_ripper_BG1.xml.gz"
 
-          echo "Tentando URL principal..."
+          echo "Baixando EPG..."
           for i in 1 2 3; do
-            curl -L --fail -o epg.xml.gz "$URL1" && break
-            echo "Falha tentativa $i..."
+            curl -L --fail -o epg.xml.gz "$URL" && break
+            echo "Tentativa $i falhou..."
             sleep 5
           done
 
-          # fallback se arquivo vazio ou inválido
           if [ ! -s epg.xml.gz ]; then
-            echo "Usando fallback..."
-            curl -L --fail -o epg.xml.gz "$URL2"
-          fi
-
-      - name: Validar download
-        run: |
-          if [ ! -s epg.xml.gz ]; then
-            echo "EPG não baixado corretamente"
+            echo "Falha ao baixar EPG"
             exit 1
           fi
 
+      - name: Validar arquivo baixado
+        run: |
           file epg.xml.gz
 
       - name: Descompactar EPG
         run: |
           gunzip -f epg.xml.gz
 
-      - name: Padronizar arquivo
+      - name: Padronizar arquivo (corrigido definitivo)
         run: |
-          FILE=$(ls *.xml | head -n 1)
-          mv "$FILE" epg.xml
+          FILE=$(ls *.xml 2>/dev/null | head -n 1)
+
+          if [ -z "$FILE" ]; then
+            echo "Nenhum XML encontrado"
+            exit 1
+          fi
+
+          echo "Arquivo encontrado: $FILE"
+
+          if [ "$FILE" != "epg.xml" ]; then
+            mv "$FILE" epg.xml
+            echo "Renomeado para epg.xml"
+          else
+            echo "Já está como epg.xml"
+          fi
 
       - name: Validar XML básico
         run: |
@@ -58,7 +64,7 @@ jobs:
             exit 1
           fi
 
-      - name: Commit inteligente
+      - name: Commit inteligente (sem push lixo)
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
@@ -70,5 +76,5 @@ jobs:
             exit 0
           fi
 
-          git commit -m "EPG atualizado automático"
+          git commit -m "EPG atualizado automaticamente"
           git push
