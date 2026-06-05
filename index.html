@@ -1,8 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+
+<style>
+html, body{
+  width:1920px;
+  height:1080px;
+  margin:0;
+  padding:0;
+  overflow:hidden;
+  background:transparent;
+  font-family:Arial, sans-serif;
+  color:#fff;
+}
+
+header{
+  position:absolute;
+  top:20px;
+  left:40px;
+  font-size:32px;
+  font-weight:bold;
+}
+
+#carousel{
+  display:flex;
+  gap:20px;
+  position:absolute;
+  top:120px;
+  left:40px;
+  transition:transform .6s ease;
+}
+
+.channel{
+  min-width:300px;
+  height:280px;
+  background:rgba(20,20,28,0.85);
+  border-radius:14px;
+  padding:15px;
+}
+
+.logo{
+  width:100%;
+  height:45px;
+  object-fit:contain;
+}
+
+.title{
+  font-size:17px;
+  font-weight:bold;
+  margin-top:8px;
+}
+
+.program{
+  font-size:14px;
+  margin-top:6px;
+}
+
+.next{
+  font-size:12px;
+  opacity:.7;
+  margin-top:8px;
+}
+
+.progress{
+  height:6px;
+  background:#333;
+  margin-top:10px;
+  border-radius:10px;
+  overflow:hidden;
+}
+
+.bar{
+  height:100%;
+  background:#ff0000;
+}
+</style>
+</head>
+
+<body>
+
 <header id="titulo"></header>
+<div id="carousel"></div>
 
 <script>
 
 const EPG_URL = "dados_epg.xml";
+
+/* ===== CANAIS ===== */
+const canais = [
+{num:"01.1", nome:"JOVEM PAN", id:"JovemPan.br", logo:"https://upload.wikimedia.org/wikipedia/commons/4/41/Logotipo_da_TV_Jovem_Pan_News.png"},
+{num:"01.3", nome:"H&H HD", id:"Discovery.HH.br", logo:"https://upload.wikimedia.org/wikipedia/commons/9/90/Discovery_H%26H_Logo_2022.webp"},
+{num:"01.4", nome:"TLC HD", id:"TLC.br", logo:"https://upload.wikimedia.org/wikipedia/commons/7/74/TLC_Logo.svg"},
+{num:"01.5", nome:"ARTE 1", id:"Arte1.br", logo:"https://upload.wikimedia.org/wikipedia/commons/3/31/Arte_1_logo.svg"},
+{num:"01.6", nome:"BAND NEWS", id:"BandNews.br", logo:"https://upload.wikimedia.org/wikipedia/commons/c/ce/BandNewsTV2024.svg"},
+
+{num:"02.1", nome:"TV CAMARA", id:"TVCamara.br", logo:"https://upload.wikimedia.org/wikipedia/commons/8/8e/Marca_TV_C%C3%A2mara_-_2018.png"},
+{num:"02.2", nome:"TV SENADO", id:"TVSenado.br", logo:"https://upload.wikimedia.org/wikipedia/commons/3/3f/TV_Senado_logo_%281996%E2%80%932016%29.png"},
+{num:"02.4", nome:"TV ESCOLA", id:"TVEscola.br", logo:"https://upload.wikimedia.org/wikipedia/commons/b/b5/TV_Escola.png"},
+{num:"02.5", nome:"CANAL SAUDE", id:"CanalSaude.br", logo:"https://acervo.canalsaude.fiocruz.br/tools/images/logo-topMaior.jpg"},
+{num:"02.6", nome:"BAND", id:"Band.br", logo:"https://upload.wikimedia.org/wikipedia/commons/2/2b/Rede_Bandeirantes_logo_2018.svg"},
+
+{num:"03.1", nome:"RECORD NEWS", id:"Record.News.br", logo:"https://upload.wikimedia.org/wikipedia/commons/4/46/Record_News_logo_2023.svg"},
+{num:"03.2", nome:"CNN BRASIL", id:"CNNBrasil.br", logo:"https://upload.wikimedia.org/wikipedia/commons/8/8b/CNN_Brasil_%28red_background%29.svg"}
+];
 
 /* ===== RELÓGIO + CLIMA ===== */
 let climaTexto = "Carregando clima...";
@@ -21,27 +122,20 @@ function atualizarRelogio(){
     horaBR + "  |  " + climaTexto;
 }
 
-/* ===== CLIMA CAMPINAS ===== */
 function atualizarClima(){
   fetch("https://wttr.in/Campinas?format=1")
   .then(r => r.text())
-  .then(txt => {
-    climaTexto = txt.replace("+",""); // limpa "+"
-  })
-  .catch(()=>{
-    climaTexto = "Clima indisponível";
-  });
+  .then(txt => climaTexto = txt.replace("+",""))
+  .catch(()=> climaTexto = "Clima indisponível");
 }
 
 setInterval(atualizarRelogio,1000);
-setInterval(atualizarClima,600000); // atualiza clima a cada 10min
+setInterval(atualizarClima,600000);
 
 atualizarRelogio();
 atualizarClima();
 
-/* ===== RESTO DO SEU CÓDIGO (NÃO ALTERADO) ===== */
-
-/* ===== CORREÇÃO FUSO EPG ===== */
+/* ===== EPG ===== */
 function parseDate(t){
   if(!t) return 0;
 
@@ -149,3 +243,6 @@ setInterval(()=>{
 },4000);
 
 </script>
+
+</body>
+</html>
