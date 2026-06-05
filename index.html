@@ -1,70 +1,93 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Guia TV LOCAL</title>
+<title>EPG TV</title>
 
 <style>
-body{
-  margin:0;
-  background:#0b0b0f;
-  font-family:Arial;
-  overflow:hidden;
+html, body{
+    width:1920px;
+    height:1080px;
+    margin:0;
+    padding:0;
+    overflow:hidden;
+    background:transparent;
+    font-family:Arial, sans-serif;
+    color:#fff;
 }
 
-#wrap{
-  width:100%;
-  overflow:hidden;
+header{
+    position:absolute;
+    top:20px;
+    left:40px;
+    font-size:32px;
+    font-weight:bold;
 }
 
-#canais{
-  display:flex;
-  gap:20px;
-  padding:20px;
-  transition:transform 1s linear;
+#carousel{
+    display:flex;
+    gap:20px;
+    position:absolute;
+    top:120px;
+    left:40px;
+    transition:transform .6s ease;
 }
 
-.card{
-  width:220px;
-  background:#1a1a22;
-  border-radius:12px;
-  padding:15px;
-  color:#fff;
-  flex-shrink:0;
+.channel{
+    min-width:300px;
+    height:280px;
+    background:rgba(20,20,28,0.85);
+    border-radius:14px;
+    padding:15px;
 }
 
 .logo{
-  height:28px;
-  margin-bottom:10px;
+    width:100%;
+    height:40px;
+    object-fit:contain;
 }
 
-.numero{ color:#aaa; font-size:13px; }
-.nome{ font-weight:bold; margin-bottom:8px; }
-.hora{ font-size:14px; color:#ccc; }
-
-.progresso{
-  height:4px;
-  background:#333;
-  margin:6px 0;
-  border-radius:3px;
-  overflow:hidden;
+.title{
+    font-size:18px;
+    font-weight:bold;
+    margin-top:10px;
 }
 
-.barra{ height:100%; background:red; }
+.program{
+    font-size:15px;
+    margin-top:8px;
+}
 
-.proximo{ font-size:12px; color:#888; }
+.next{
+    font-size:13px;
+    opacity:.7;
+    margin-top:10px;
+}
+
+.progress{
+    height:6px;
+    background:#333;
+    margin-top:12px;
+    border-radius:10px;
+    overflow:hidden;
+}
+
+.bar{
+    height:100%;
+    background:#ff0000;
+}
 </style>
-
 </head>
+
 <body>
 
-<div id="wrap">
-  <div id="canais"></div>
-</div>
+<header id="topo">--:-- | ⛅ --°C</header>
+<div id="carousel"></div>
 
 <script>
+const EPG_URL = "dados_epg.xml";
 
-// ===== SUA LISTA (pode colar completa)
+/* ===== LISTA DE CANAIS ===== */
 const canais = [
 
 {num:"01.1", nome:"JOVEM PAN", id:"JovemPan.br", logo:"https://upload.wikimedia.org/wikipedia/commons/4/41/Logotipo_da_TV_Jovem_Pan_News.png"},
@@ -142,135 +165,80 @@ const canais = [
 
 ];
 
-// ===== IMPORTANTE: ARQUIVO LOCAL
-const EPG_URL = "dados_epg.xml";
+/* ===== EPG ===== */
+function carregarEPG(xml){
+    const progs = [...xml.querySelectorAll("programme")];
+    const box = document.getElementById("carousel");
+    box.innerHTML = "";
 
-let epg = [];
-let pos = 0;
+    canais.forEach(c=>{
 
-// ===== DATA
-function parseEPGDate(str){
-  return new Date(
-    str.substr(0,4),
-    str.substr(4,2)-1,
-    str.substr(6,2),
-    str.substr(8,2),
-    str.substr(10,2)
-  );
+        let lista = progs.filter(p=>p.getAttribute("channel")==c.id)
+            .sort((a,b)=>parseDate(a.getAttribute("start")) - parseDate(b.getAttribute("start")));
+
+        let now = Date.now();
+
+        let atual = lista.find(p =>
+            parseDate(p.getAttribute("start")) <= now &&
+            parseDate(p.getAttribute("stop")) >= now
+        );
+
+        let prox = lista.find(p =>
+            parseDate(p.getAttribute("start")) > now
+        );
+
+        let titulo = atual?.querySelector("title")?.textContent || "Sem info";
+        let ini = hora(atual?.getAttribute("start"));
+        let fim = hora(atual?.getAttribute("stop"));
+
+        let proxTitulo = prox?.querySelector("title")?.textContent || "Sem info";
+        let proxHora = hora(prox?.getAttribute("start"));
+
+        let prog = atual ? progresso(
+            parseDate(atual.getAttribute("start")),
+            parseDate(atual.getAttribute("stop"))
+        ) : 0;
+
+        box.innerHTML += `
+        <div class="channel">
+            <img class="logo" src="${c.logo}" onerror="this.style.display='none'">
+            <div class="title">${c.num} - ${c.nome}</div>
+
+            <div class="program">
+                <b>${ini} - ${fim}</b><br>
+                ${titulo}
+            </div>
+
+            <div class="progress">
+                <div class="bar" style="width:${prog}%"></div>
+            </div>
+
+            <div class="next">
+                ➡ ${proxHora} - ${proxTitulo}
+            </div>
+        </div>`;
+    });
 }
 
-// ===== CARREGAR LOCAL
-async function carregarEPG(){
-  try{
-    const res = await fetch(EPG_URL);
-    const xml = await res.text();
-
-    const doc = new DOMParser().parseFromString(xml,"text/xml");
-
-    epg = [...doc.querySelectorAll("programme")].map(p=>({
-      channel:p.getAttribute("channel"),
-      start:parseEPGDate(p.getAttribute("start")),
-      stop:parseEPGDate(p.getAttribute("stop"))
-    }));
-
-    atualizar();
-
-  }catch(e){
-    console.log("Erro EPG local:", e);
-    atualizar();
-  }
-}
-
-// ===== AGORA / PROXIMO
-function getNowNext(id){
-  const agora = new Date();
-  const lista = epg.filter(p=>p.channel===id);
-
-  let atual=null, prox=null;
-
-  for(let i=0;i<lista.length;i++){
-    if(agora>=lista[i].start && agora<lista[i].stop){
-      atual = lista[i];
-      prox = lista[i+1] || null;
-      break;
-    }
-  }
-
-  return {atual, prox};
-}
-
-// ===== RENDER
+/* ===== UPDATE ===== */
 function atualizar(){
-
-  const div = document.getElementById("canais");
-  div.innerHTML="";
-
-  canais.forEach(c=>{
-
-    const {atual, prox} = getNowNext(c.id);
-
-    let hora="--:--", progresso=0, proxHora="--:--";
-
-    if(atual){
-      hora = atual.start.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
-
-      const total = atual.stop - atual.start;
-      const passou = new Date() - atual.start;
-
-      progresso = Math.min(100,(passou/total)*100);
-    }
-
-    if(prox){
-      proxHora = prox.start.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
-    }
-
-    div.innerHTML += `
-      <div class="card">
-        <img class="logo" src="${c.logo}">
-        <div class="numero">${c.num}</div>
-        <div class="nome">${c.nome}</div>
-
-        <div class="hora">${hora}</div>
-
-        <div class="progresso">
-          <div class="barra" style="width:${progresso}%"></div>
-        </div>
-
-        <div class="proximo">→ ${proxHora}</div>
-      </div>
-    `;
-  });
+    fetch(EPG_URL)
+        .then(r=>r.text())
+        .then(str=>new DOMParser().parseFromString(str,"text/xml"))
+        .then(xml=>carregarEPG(xml))
+        .catch(()=>console.log("Erro EPG"));
 }
+atualizar();
+setInterval(atualizar,60000);
 
-// ===== CARROSSEL
-function mover(){
-  const container = document.getElementById("canais");
-  pos++;
-
-  const largura = 240;
-  container.style.transform = `translateX(-${pos * largura}px)`;
-
-  if(pos >= canais.length){
-    setTimeout(()=>{
-      container.style.transition="none";
-      container.style.transform="translateX(0)";
-      pos=0;
-
-      setTimeout(()=>{
-        container.style.transition="transform 1s linear";
-      },50);
-
-    },1000);
-  }
-}
-
-// LOOP
-setInterval(mover, 4000);
-setInterval(atualizar, 30000);
-
-// start
-carregarEPG();
-
+/* ===== CARROSSEL ===== */
+let i = 0;
+setInterval(()=>{
+    const box = document.getElementById("carousel");
+    i++;
+    if(i >= canais.length) i = 0;
+    box.style.transform = `translateX(-${i * 320}px)`;
+},4000);
 </script>
 
 </body>
