@@ -16,15 +16,12 @@ html, body{
   color:#fff;
 }
 
-body{
-  display:flex;
-  flex-direction:column;
-}
-
-/* HEADER */
+/* HEADER FIXO (OBS FRIENDLY) */
 header{
-  padding:25px 40px;
-  font-size:32px;
+  position:absolute;
+  top:20px;
+  left:40px;
+  font-size:34px;
   font-weight:bold;
 }
 
@@ -32,7 +29,9 @@ header{
 #carousel{
   display:flex;
   gap:20px;
-  padding:20px 40px;
+  position:absolute;
+  top:120px;
+  left:40px;
   transition:transform .6s ease;
 }
 
@@ -42,14 +41,12 @@ header{
   background:rgba(20,20,28,0.85);
   border-radius:14px;
   padding:15px;
-  box-shadow:0 0 20px rgba(0,0,0,0.4);
 }
 
 .logo{
   width:100%;
-  height:60px;
+  height:50px;
   object-fit:contain;
-  margin-bottom:5px;
 }
 
 .title{
@@ -92,7 +89,6 @@ header{
 
 <script>
 
-/* CONFIG */
 const EPG_URL = "dados_epg.xml";
 
 /* CANAIS */
@@ -104,9 +100,11 @@ const canais = [
 {num:"55.1", nome:"TNT", id:"TNT.br", logo:"https://images.weserv.nl/?url=upload.wikimedia.org/wikipedia/commons/2/24/TNT_Logo_2016.svg"}
 ];
 
-/* ===== RELÓGIO NO TÍTULO (FUSO SP) ===== */
+/* ===== RELÓGIO CORRETO BRASIL ===== */
 function atualizarRelogio(){
-  const agora = new Date().toLocaleTimeString("pt-BR", {
+  const agora = new Date();
+
+  const horaBR = agora.toLocaleTimeString("pt-BR", {
     timeZone: "America/Sao_Paulo",
     hour: "2-digit",
     minute: "2-digit",
@@ -114,22 +112,26 @@ function atualizarRelogio(){
   });
 
   document.getElementById("titulo").innerText =
-    "📺 Guia de Programação - " + agora;
+    "📺 Guia de Programação - " + horaBR;
 }
 
 setInterval(atualizarRelogio,1000);
 atualizarRelogio();
 
-/* FUNÇÕES */
+/* ===== CORREÇÃO FUSO EPG ===== */
 function parseDate(t){
   if(!t) return 0;
-  return new Date(
+
+  // UTC → Brasil (-3h)
+  const utc = Date.UTC(
     t.substring(0,4),
     t.substring(4,6)-1,
     t.substring(6,8),
     t.substring(8,10),
     t.substring(10,12)
-  ).getTime();
+  );
+
+  return utc - (3 * 60 * 60 * 1000); // ajuste Brasil
 }
 
 function calc(start,stop){
@@ -142,7 +144,9 @@ function calc(start,stop){
 
 function hora(t){
   if(!t) return "--:--";
-  return t.substring(8,10)+":"+t.substring(10,12);
+  const d = new Date(parseDate(t));
+  return d.getHours().toString().padStart(2,"0") + ":" +
+         d.getMinutes().toString().padStart(2,"0");
 }
 
 /* RENDER */
@@ -151,22 +155,21 @@ function carregarEPG(xml){
 const progs = [...xml.querySelectorAll("programme")];
 const box = document.getElementById("carousel");
 
-const posAtual = box.style.transform;
 box.innerHTML = "";
 
 canais.forEach(c=>{
 
-let now = new Date().toISOString().replace(/[-:TZ]/g,"").slice(0,12);
+let now = Date.now();
 
 let atual = progs.find(p =>
 p.getAttribute("channel")==c.id &&
-p.getAttribute("start")<=now &&
-p.getAttribute("stop")>=now
+parseDate(p.getAttribute("start")) <= now &&
+parseDate(p.getAttribute("stop")) >= now
 );
 
 let prox = progs.find(p =>
 p.getAttribute("channel")==c.id &&
-p.getAttribute("start") > now
+parseDate(p.getAttribute("start")) > now
 );
 
 let titulo = atual?.querySelector("title")?.textContent || "Sem programação";
@@ -201,8 +204,6 @@ ${titulo}
 `;
 
 });
-
-box.style.transform = posAtual;
 }
 
 /* ATUALIZAÇÃO */
@@ -217,7 +218,7 @@ fetch(EPG_URL)
 atualizar();
 setInterval(atualizar, 60000);
 
-/* CARROSSEL */
+/* CARROSSEL LOOP */
 let index = 0;
 
 setInterval(()=>{
