@@ -11,7 +11,7 @@ html, body{
   margin:0;
   padding:0;
   overflow:hidden;
-  background:transparent; /* TRANSPARENTE */
+  background:transparent;
   font-family:Arial, sans-serif;
   color:#fff;
 }
@@ -21,19 +21,11 @@ body{
   flex-direction:column;
 }
 
-/* HEADER COM RELÓGIO */
+/* HEADER */
 header{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
   padding:25px 40px;
   font-size:32px;
   font-weight:bold;
-}
-
-#clock{
-  font-size:26px;
-  opacity:0.9;
 }
 
 /* CARROSSEL */
@@ -47,7 +39,7 @@ header{
 .channel{
   min-width:300px;
   height:280px;
-  background:rgba(20,20,28,0.85); /* leve transparência */
+  background:rgba(20,20,28,0.85);
   border-radius:14px;
   padding:15px;
   box-shadow:0 0 20px rgba(0,0,0,0.4);
@@ -87,17 +79,14 @@ header{
 
 .bar{
   height:100%;
-  background:#ff0000; /* vermelho */
+  background:#ff0000;
 }
 </style>
 </head>
 
 <body>
 
-<header>
-  <div>📺 Guia de Programação</div>
-  <div id="clock"></div>
-</header>
+<header id="titulo">📺 Guia de Programação</header>
 
 <div id="carousel"></div>
 
@@ -115,7 +104,7 @@ const canais = [
 {num:"55.1", nome:"TNT", id:"TNT.br", logo:"https://images.weserv.nl/?url=upload.wikimedia.org/wikipedia/commons/2/24/TNT_Logo_2016.svg"}
 ];
 
-/* ===== RELÓGIO (FUSO SP) ===== */
+/* ===== RELÓGIO NO TÍTULO (FUSO SP) ===== */
 function atualizarRelogio(){
   const agora = new Date().toLocaleTimeString("pt-BR", {
     timeZone: "America/Sao_Paulo",
@@ -123,8 +112,11 @@ function atualizarRelogio(){
     minute: "2-digit",
     second: "2-digit"
   });
-  document.getElementById("clock").innerText = agora;
+
+  document.getElementById("titulo").innerText =
+    "📺 Guia de Programação - " + agora;
 }
+
 setInterval(atualizarRelogio,1000);
 atualizarRelogio();
 
