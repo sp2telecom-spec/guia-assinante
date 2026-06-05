@@ -1,4 +1,4 @@
-name: Atualizar EPG
+name: Atualizar EPG (Pro)
 
 on:
   schedule:
@@ -11,23 +11,64 @@ jobs:
 
     steps:
       - name: Clonar repositório
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Baixar EPG
-        run: curl -L -o epg.xml.gz https://epgshare01.online/epgshare01/epg_ripper_BG1.xml.gz
+      - name: Baixar EPG (com fallback + retry)
+        run: |
+          set -e
 
-      - name: Descompactar
-        run: gunzip -f epg.xml.gz
+          URL1="https://epgshare01.online/epgshare01/epg_ripper_BG1.xml.gz"
+          URL2="https://epgshare01.online/epgshare01/epg_ripper_BR1.xml.gz"
 
-      - name: Renomear corretamente
+          echo "Tentando URL principal..."
+          for i in 1 2 3; do
+            curl -L --fail -o epg.xml.gz "$URL1" && break
+            echo "Falha tentativa $i..."
+            sleep 5
+          done
+
+          # fallback se arquivo vazio ou inválido
+          if [ ! -s epg.xml.gz ]; then
+            echo "Usando fallback..."
+            curl -L --fail -o epg.xml.gz "$URL2"
+          fi
+
+      - name: Validar download
+        run: |
+          if [ ! -s epg.xml.gz ]; then
+            echo "EPG não baixado corretamente"
+            exit 1
+          fi
+
+          file epg.xml.gz
+
+      - name: Descompactar EPG
+        run: |
+          gunzip -f epg.xml.gz
+
+      - name: Padronizar arquivo
         run: |
           FILE=$(ls *.xml | head -n 1)
           mv "$FILE" epg.xml
 
-      - name: Commit e push
+      - name: Validar XML básico
+        run: |
+          if ! grep -q "<tv" epg.xml; then
+            echo "XML inválido"
+            exit 1
+          fi
+
+      - name: Commit inteligente
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
+
           git add epg.xml
-          git commit -m "EPG atualizado automaticamente" || echo "Sem mudanças"
+
+          if git diff --cached --quiet; then
+            echo "Sem alterações no EPG"
+            exit 0
+          fi
+
+          git commit -m "EPG atualizado automático"
           git push
