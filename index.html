@@ -2,18 +2,18 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-
-<!-- fonte correta -->
-<link href="https://adobe-fonts.github.io/source-code-pro/source-code-pro.css" rel="stylesheet">
-
-<title>Guia TV</title>
+<title>Guia TV LOCAL</title>
 
 <style>
-html, body {
+body{
   margin:0;
-  padding:0;
   background:#0b0b0f;
-  font-family: 'Source Code Pro', monospace;
+  font-family:Arial;
+  overflow:hidden;
+}
+
+#wrap{
+  width:100%;
   overflow:hidden;
 }
 
@@ -21,6 +21,7 @@ html, body {
   display:flex;
   gap:20px;
   padding:20px;
+  transition:transform 1s linear;
 }
 
 .card{
@@ -33,24 +34,13 @@ html, body {
 }
 
 .logo{
-  height:30px;
+  height:28px;
   margin-bottom:10px;
 }
 
-.numero{
-  color:#aaa;
-  font-size:13px;
-}
-
-.nome{
-  font-weight:bold;
-  margin-bottom:8px;
-}
-
-.hora{
-  font-size:14px;
-  color:#ccc;
-}
+.numero{ color:#aaa; font-size:13px; }
+.nome{ font-weight:bold; margin-bottom:8px; }
+.hora{ font-size:14px; color:#ccc; }
 
 .progresso{
   height:4px;
@@ -60,25 +50,21 @@ html, body {
   overflow:hidden;
 }
 
-.barra{
-  height:100%;
-  background:red;
-}
+.barra{ height:100%; background:red; }
 
-.proximo{
-  font-size:12px;
-  color:#888;
-}
+.proximo{ font-size:12px; color:#888; }
 </style>
 
 </head>
 <body>
 
-<div id="canais"></div>
+<div id="wrap">
+  <div id="canais"></div>
+</div>
 
 <script>
 
-// ===== LISTA (use a sua completa depois)
+// ===== SUA LISTA (pode colar completa)
 const canais = [
 
 {num:"01.1", nome:"JOVEM PAN", id:"JovemPan.br", logo:"https://upload.wikimedia.org/wikipedia/commons/4/41/Logotipo_da_TV_Jovem_Pan_News.png"},
@@ -156,57 +142,54 @@ const canais = [
 
 ];
 
-// ===== URL EPG (troque se precisar)
-const EPG_URL = "https://iptv-org.github.io/epg/guides/br.xml";
+// ===== IMPORTANTE: ARQUIVO LOCAL
+const EPG_URL = "epg.xml";
 
 let epg = [];
+let pos = 0;
 
-// ===== converter horário EPG (CORRIGIDO)
+// ===== DATA
 function parseEPGDate(str){
-  const y = str.substr(0,4);
-  const m = str.substr(4,2);
-  const d = str.substr(6,2);
-  const h = str.substr(8,2);
-  const min = str.substr(10,2);
-
-  // cria em UTC e ajusta -3
-  return new Date(Date.UTC(y,m-1,d,h,min) - (3*60*60*1000));
+  return new Date(
+    str.substr(0,4),
+    str.substr(4,2)-1,
+    str.substr(6,2),
+    str.substr(8,2),
+    str.substr(10,2)
+  );
 }
 
-// ===== carregar EPG
+// ===== CARREGAR LOCAL
 async function carregarEPG(){
   try{
     const res = await fetch(EPG_URL);
     const xml = await res.text();
 
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(xml,"text/xml");
+    const doc = new DOMParser().parseFromString(xml,"text/xml");
 
     epg = [...doc.querySelectorAll("programme")].map(p=>({
       channel:p.getAttribute("channel"),
       start:parseEPGDate(p.getAttribute("start")),
-      stop:parseEPGDate(p.getAttribute("stop")),
-      title:p.querySelector("title")?.textContent || ""
+      stop:parseEPGDate(p.getAttribute("stop"))
     }));
 
     atualizar();
 
   }catch(e){
-    console.log("Erro EPG:", e);
+    console.log("Erro EPG local:", e);
+    atualizar();
   }
 }
 
-// ===== pegar atual e próximo (CORRIGIDO)
+// ===== AGORA / PROXIMO
 function getNowNext(id){
   const agora = new Date();
-
   const lista = epg.filter(p=>p.channel===id);
 
-  let atual = null;
-  let prox = null;
+  let atual=null, prox=null;
 
   for(let i=0;i<lista.length;i++){
-    if(agora >= lista[i].start && agora < lista[i].stop){
+    if(agora>=lista[i].start && agora<lista[i].stop){
       atual = lista[i];
       prox = lista[i+1] || null;
       break;
@@ -216,19 +199,17 @@ function getNowNext(id){
   return {atual, prox};
 }
 
-// ===== renderizar
+// ===== RENDER
 function atualizar(){
 
   const div = document.getElementById("canais");
-  div.innerHTML = "";
+  div.innerHTML="";
 
   canais.forEach(c=>{
 
     const {atual, prox} = getNowNext(c.id);
 
-    let hora = "--:--";
-    let progresso = 0;
-    let proxHora = "--:--";
+    let hora="--:--", progresso=0, proxHora="--:--";
 
     if(atual){
       hora = atual.start.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
@@ -236,7 +217,7 @@ function atualizar(){
       const total = atual.stop - atual.start;
       const passou = new Date() - atual.start;
 
-      progresso = Math.min(100, (passou/total)*100);
+      progresso = Math.min(100,(passou/total)*100);
     }
 
     if(prox){
@@ -261,10 +242,33 @@ function atualizar(){
   });
 }
 
-// ===== LOOP (SEM RECARREGAR PÁGINA)
+// ===== CARROSSEL
+function mover(){
+  const container = document.getElementById("canais");
+  pos++;
+
+  const largura = 240;
+  container.style.transform = `translateX(-${pos * largura}px)`;
+
+  if(pos >= canais.length){
+    setTimeout(()=>{
+      container.style.transition="none";
+      container.style.transform="translateX(0)";
+      pos=0;
+
+      setTimeout(()=>{
+        container.style.transition="transform 1s linear";
+      },50);
+
+    },1000);
+  }
+}
+
+// LOOP
+setInterval(mover, 4000);
 setInterval(atualizar, 30000);
 
-// iniciar
+// start
 carregarEPG();
 
 </script>
