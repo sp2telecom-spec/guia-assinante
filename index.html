@@ -125,7 +125,19 @@ function atualizarRelogio(){
 function atualizarClima(){
   fetch("https://wttr.in/Campinas?format=1")
   .then(r => r.text())
-  .then(txt => climaTexto = txt.replace("+",""))
+  .then(txt => {
+  // exemplo original: "Campinas: ☀️ +25°C"
+  
+  let partes = txt.split(":");
+
+  if(partes.length > 1){
+    climaTexto = partes[1]
+      .replace("+","")
+      .trim(); // "☀️ 25°C"
+  } else {
+    climaTexto = txt;
+  }
+})
   .catch(()=> climaTexto = "Clima indisponível");
 }
 
