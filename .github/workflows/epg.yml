@@ -1,5 +1,8 @@
 name: Atualizar EPG (Pro)
 
+permissions:
+  contents: write
+
 on:
   schedule:
     - cron: '0 */3 * * *'
@@ -13,58 +16,28 @@ jobs:
       - name: Clonar repositório
         uses: actions/checkout@v4
 
-      - name: Baixar EPG (com retry)
+      - name: Baixar EPG
         run: |
           set -e
-
           URL="https://epgshare01.online/epgshare01/epg_ripper_BG1.xml.gz"
 
-          echo "Baixando EPG..."
           for i in 1 2 3; do
             curl -L --fail -o epg.xml.gz "$URL" && break
-            echo "Tentativa $i falhou..."
             sleep 5
           done
 
-          if [ ! -s epg.xml.gz ]; then
-            echo "Falha ao baixar EPG"
-            exit 1
-          fi
+      - name: Descompactar
+        run: gunzip -f epg.xml.gz
 
-      - name: Validar arquivo baixado
+      - name: Padronizar arquivo
         run: |
-          file epg.xml.gz
-
-      - name: Descompactar EPG
-        run: |
-          gunzip -f epg.xml.gz
-
-      - name: Padronizar arquivo (corrigido definitivo)
-        run: |
-          FILE=$(ls *.xml 2>/dev/null | head -n 1)
-
-          if [ -z "$FILE" ]; then
-            echo "Nenhum XML encontrado"
-            exit 1
-          fi
-
-          echo "Arquivo encontrado: $FILE"
+          FILE=$(ls *.xml | head -n 1)
 
           if [ "$FILE" != "epg.xml" ]; then
             mv "$FILE" epg.xml
-            echo "Renomeado para epg.xml"
-          else
-            echo "Já está como epg.xml"
           fi
 
-      - name: Validar XML básico
-        run: |
-          if ! grep -q "<tv" epg.xml; then
-            echo "XML inválido"
-            exit 1
-          fi
-
-      - name: Commit inteligente (sem push lixo)
+      - name: Commit e push
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
@@ -72,7 +45,7 @@ jobs:
           git add epg.xml
 
           if git diff --cached --quiet; then
-            echo "Sem alterações no EPG"
+            echo "Sem mudanças"
             exit 0
           fi
 
