@@ -19,8 +19,10 @@ jobs:
       - name: Descompactar
         run: gunzip -f epg.xml.gz
 
-      - name: Renomear
-        run: mv epg_ripper_BG1.xml epg.xml
+      - name: Renomear corretamente
+        run: |
+          FILE=$(ls *.xml | head -n 1)
+          mv "$FILE" epg.xml
 
       - name: Commit e push
         run: |
