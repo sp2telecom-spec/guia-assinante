@@ -12,19 +12,20 @@ jobs:
   update-epg:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: write   # 👈 ESSA LINHA RESOLVE
+
     steps:
       - name: Clonar repositório
         uses: actions/checkout@v4
 
       - name: Baixar EPG
         run: |
-          curl -L -o epg.xml.gz https://epgshare01.online/epgshare01/epg_ripper_BG1.xml.gz
-          ls -lh
+          curl -L -o epg.xml.gz https://epgshare01.online/epgshare01/epg_ripper_BR1.xml.gz
 
       - name: Descompactar
         run: |
           gunzip -f epg.xml.gz
-          ls -lh
 
       - name: Garantir nome epg.xml
         run: |
