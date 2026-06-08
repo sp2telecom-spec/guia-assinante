@@ -18,7 +18,7 @@ jobs:
 
       - name: Baixar EPG
         run: |
-          curl -L -o epg.xml.gz https://epgshare01.online/epgshare01/epg_ripper_BR1.xml.gz
+          curl -L -o epg.xml.gz https://epgshare01.online/epgshare01/epg_ripper_BG1.xml.gz
           ls -lh
 
       - name: Descompactar
@@ -27,11 +27,11 @@ jobs:
           ls -lh
 
       - name: Garantir nome epg.xml
-  run: |
-    FILE=$(ls *.xml | head -n 1)
-    if [ "$FILE" != "epg.xml" ]; then
-      mv "$FILE" epg.xml
-    fi
+        run: |
+          FILE=$(ls *.xml | head -n 1)
+          if [ "$FILE" != "epg.xml" ]; then
+            mv "$FILE" epg.xml
+          fi
 
       - name: Commit e push
         run: |
