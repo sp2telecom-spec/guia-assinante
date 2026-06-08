@@ -26,10 +26,12 @@ jobs:
           gunzip -f epg.xml.gz
           ls -lh
 
-      - name: Renomear
-        run: |
-          FILE=$(ls *.xml | head -n 1)
-          mv "$FILE" epg.xml
+      - name: Garantir nome epg.xml
+  run: |
+    FILE=$(ls *.xml | head -n 1)
+    if [ "$FILE" != "epg.xml" ]; then
+      mv "$FILE" epg.xml
+    fi
 
       - name: Commit e push
         run: |
