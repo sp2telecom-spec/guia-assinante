@@ -210,23 +210,24 @@ atualizarRelogio();
 function parseDate(t){
   if(!t) return 0;
 
-  // formato: 20250608153000 -0300
+  // Ex: 20250608153000 OU 20250608153000 -0300
   const year = t.substring(0,4);
   const month = t.substring(4,6);
   const day = t.substring(6,8);
   const hour = t.substring(8,10);
   const min = t.substring(10,12);
 
-  const base = `${year}-${month}-${day}T${hour}:${min}:00`;
+  // verifica se tem timezone
+  const hasTZ = t.length > 14;
 
-  // pega timezone se existir
-  const tz = t.substring(14,19);
-
-  if(tz && (tz.includes("+") || tz.includes("-"))){
-    return new Date(base + tz).getTime();
+  if(hasTZ){
+    // formato com timezone
+    const tz = t.substring(14).trim();
+    return new Date(`${year}-${month}-${day}T${hour}:${min}:00${tz}`).getTime();
+  } else {
+    // formato SEM timezone (assume horário local BR)
+    return new Date(year, month-1, day, hour, min).getTime();
   }
-
-  return new Date(base).getTime();
 }
 
 function calc(start,stop){
