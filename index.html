@@ -210,15 +210,23 @@ atualizarRelogio();
 function parseDate(t){
   if(!t) return 0;
 
-  const utc = Date.UTC(
-    t.substring(0,4),
-    t.substring(4,6)-1,
-    t.substring(6,8),
-    t.substring(8,10),
-    t.substring(10,12)
-  );
+  // formato: 20250608153000 -0300
+  const year = t.substring(0,4);
+  const month = t.substring(4,6);
+  const day = t.substring(6,8);
+  const hour = t.substring(8,10);
+  const min = t.substring(10,12);
 
-  return utc - (3 * 60 * 60 * 1000);
+  const base = `${year}-${month}-${day}T${hour}:${min}:00`;
+
+  // pega timezone se existir
+  const tz = t.substring(14,19);
+
+  if(tz && (tz.includes("+") || tz.includes("-"))){
+    return new Date(base + tz).getTime();
+  }
+
+  return new Date(base).getTime();
 }
 
 function calc(start,stop){
