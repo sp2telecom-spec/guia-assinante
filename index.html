@@ -89,7 +89,11 @@ html, body{
 <div id="carousel"></div>
 
 <script>
-const EPG_URL = "epg.xml";
+// ===== DIGITE AQUI AS SUAS FONTES DE EPG (COLOQUE QUANTAS QUISER) =====
+const EPG_URLS = [
+  "epg.xml",
+  "epg2.xml"
+];
 
 const canais = [
   {num:"01.1", nome:"JOVEM PAN", id:["Jovem.Pan.News.br","JovemPan.br"], logo:"https://upload.wikimedia.org/wikipedia/commons/4/41/Logotipo_da_TV_Jovem_Pan_News.png"},
@@ -211,7 +215,7 @@ function parseDate(t){
   if(!t) return 0;
   const utc = Date.UTC(
     t.substring(0,4),
-    parseInt(t.substring(4,6), 10) - 1, // Correção do mês (0-11)
+    parseInt(t.substring(4,6), 10) - 1,
     t.substring(6,8),
     t.substring(8,10),
     t.substring(10,12)
@@ -235,26 +239,23 @@ function hora(t){
 }
 
 /* RENDER */
-function carregarEPG(xml){
-  const progs = Array.from(xml.querySelectorAll("programme"));
+function carregarEPG(programasAgrupados){
   const box = document.getElementById("carousel");
   const now = Date.now();
-  
-  let htmlFinal = ""; // Evita múltiplos reflows na página
+  let htmlFinal = "";
 
   canais.forEach(c => {
-    // Garante compatibilidade caso o ID seja array ou string simples
     const listaIds = Array.isArray(c.id) ? c.id : [c.id];
 
-    // Busca o programa atual comparando com a lista de IDs
-    let atual = progs.find(p =>
+    // Busca o programa atual na lista unificada de todos os XMLs
+    let atual = programasAgrupados.find(p =>
       listaIds.includes(p.getAttribute("channel")) &&
       parseDate(p.getAttribute("start")) <= now &&
       parseDate(p.getAttribute("stop")) >= now
     );
 
-    // Filtra e organiza cronologicamente para obter o próximo programa real
-    let proximos do canal = progs.filter(p =>
+    // Filtra e organiza os próximos programas de forma cronológica
+    let proximos = programasAgrupados.filter(p =>
       listaIds.includes(p.getAttribute("channel")) &&
       parseDate(p.getAttribute("start")) > now
     ).sort((a, b) => parseDate(a.getAttribute("start")) - parseDate(b.getAttribute("start")));
@@ -291,13 +292,26 @@ function carregarEPG(xml){
   box.innerHTML = htmlFinal;
 }
 
-/* ATUALIZAÇÃO */
+/* ATUALIZAÇÃO MULTI-FONTE */
 function atualizar(){
-  fetch(EPG_URL)
-    .then(r => r.text())
-    .then(str => new DOMParser().parseFromString(str, "text/xml"))
-    .then(xml => carregarEPG(xml))
-    .catch(err => console.log("Erro EPG", err));
+  // Cria uma lista de requisições baseada nas URLs configuradas
+  const requisicoes = EPG_URLS.map(url => 
+    fetch(url)
+      .then(r => r.text())
+      .then(str => new DOMParser().parseFromString(str, "text/xml"))
+      .then(xml => Array.from(xml.querySelectorAll("programme")))
+      .catch(err => {
+        console.warn(`Erro ao carregar a fonte: ${url}`, err);
+        return []; // Retorna lista vazia caso uma fonte falhe, para não quebrar as outras
+      })
+  );
+
+  // Executa todas as buscas de forma paralela
+  Promise.all(requisicoes).then(resultados => {
+    // Junta todas as arrays de programas de todas as fontes em uma lista só (.flat)
+    const todosOsProgramas = resultados.flat();
+    carregarEPG(todosOsProgramas);
+  });
 }
 
 atualizar();
@@ -312,7 +326,6 @@ setInterval(() => {
   index++;
   if(index >= canais.length) index = 0;
   
-  // 318px representa a largura de 300px do card + 18px de gap que você aplicou no CSS
   box.style.transform = `translateX(-${index * 318}px)`;
 }, 4000);
 </script>
