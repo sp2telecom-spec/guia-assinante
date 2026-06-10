@@ -4,10 +4,6 @@
 <meta charset="UTF-8">
 <title>GUIA TV</title>
 
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="Pragma" content="no-cache">
-<meta http-equiv="Expires" content="0">
-
 <style>
 html, body{
   width:1920px;
@@ -34,13 +30,15 @@ html, body{
 .channel{
   min-width:300px;
   height:180px;
+
   background: rgba(20, 20, 20, 0.6);
   backdrop-filter: blur(14px);
+
   border-radius:16px;
   padding:10px;
+
   border:1px solid rgba(255,255,255,0.12);
 }
-
 /* LOGO */
 .logo{
   width:100%;
@@ -69,7 +67,7 @@ html, body{
   margin-top:8px;
 }
 
-/* BARRA PROGRESSO */
+/* BARRA PROGRESSO (estilo Claro) */
 .progress{
   height:4px;
   background:rgba(255,255,255,0.15);
@@ -80,7 +78,7 @@ html, body{
 
 .bar{
   height:100%;
-  background:#00c853;
+  background:#00c853; /* verde estilo moderno */
   border-radius:10px;
 }
 </style>
@@ -88,20 +86,18 @@ html, body{
 
 <body>
 
+
 <div id="carousel"></div>
 
 <script>
 
-const EPG_URLS = [
-  "https://epg.pw/xmltv/epg_BR.xml",
-  "https://epgshare01.online/epgshare01/epg_ripper_BR1.xml"
-];
+const EPG_URL = "epg.xml";
 
 const canais = [
 
-{num:"01.1", nome:"JOVEM PAN", id:["417187","Jovem.Pan.News.br","JovemPan.br"], logo:"https://upload.wikimedia.org/wikipedia/commons/4/41/Logotipo_da_TV_Jovem_Pan_News.png"},
+{num:"01.1", nome:"JOVEM PAN", id:["Jovem.Pan.News.br","JovemPan.br"], logo:"https://upload.wikimedia.org/wikipedia/commons/4/41/Logotipo_da_TV_Jovem_Pan_News.png"},
 {num:"01.3", nome:"H&H HD", id:["Sao.Paulo/SP..Discovery.Home.and.Health.br","São.Paulo/SP..Discovery.Home.and.Health.HD.br"], logo:"https://upload.wikimedia.org/wikipedia/commons/9/90/Discovery_H%26H_Logo_2022.webp"},
-{num:"01.4", nome:"TLC HD", id:["523307","Sao.Paulo/SP..TLC.br","Sao.Paulo/SP..TLC.HD.br"], logo:"https://upload.wikimedia.org/wikipedia/commons/7/74/TLC_Logo.svg"},
+{num:"01.4", nome:"TLC HD", id:["Sao.Paulo/SP..TLC.br","Sao.Paulo/SP..TLC.HD.br"], logo:"https://upload.wikimedia.org/wikipedia/commons/7/74/TLC_Logo.svg"},
 {num:"01.5", nome:"ARTE 1", id:["Sao.Paulo/SP..Arte.1.br","São.Paulo/SP..Arte.1.HD.br"], logo:"https://upload.wikimedia.org/wikipedia/commons/3/31/Arte_1_logo.svg"},
 {num:"01.6", nome:"BAND NEWS", id:["Sao.Paulo/SP..Band.News.br","São.Paulo/SP..Band.News.HD.br"], logo:"https://upload.wikimedia.org/wikipedia/commons/c/ce/BandNewsTV2024.svg"},
 
@@ -199,38 +195,39 @@ const canais = [
 {num:"69.4", nome:"PRIME BOX", id:["Sao.Paulo/SP..Prime.Box.Brazil.br"], logo:"https://upload.wikimedia.org/wikipedia/commons/1/16/PrimeBoxBrazil2019.png"},
 {num:"69.5", nome:"CAZE TV", id:["Caze.tv"], logo:"https://upload.wikimedia.org/wikipedia/pt/2/22/Logotipo_da_Caz%C3%A9TV.png"}
 
-
 ];
 
-/* ===== RELÓGIO ===== */
+/* ===== RELÓGIO CORRETO BRASIL ===== */
 function atualizarRelogio(){
   const agora = new Date();
+
+  const horaBR = agora.toLocaleTimeString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit"
+  });
+
+  
 }
+
 setInterval(atualizarRelogio,1000);
 atualizarRelogio();
 
-/* ===== DATA ===== */
+/* ===== CORREÇÃO FUSO EPG ===== */
 function parseDate(t){
   if(!t) return 0;
 
-  // Ex: 20250608153000 OU 20250608153000 -0300
-  const year = t.substring(0,4);
-  const month = t.substring(4,6);
-  const day = t.substring(6,8);
-  const hour = t.substring(8,10);
-  const min = t.substring(10,12);
+  // UTC → Brasil (-3h)
+  const utc = Date.UTC(
+    t.substring(0,4),
+    t.substring(4,6)-1,
+    t.substring(6,8),
+    t.substring(8,10),
+    t.substring(10,12)
+  );
 
-  // verifica se tem timezone
-  const hasTZ = t.length > 14;
-
-  if(hasTZ){
-    // formato com timezone
-    const tz = t.substring(14).trim();
-    return new Date(`${year}-${month}-${day}T${hour}:${min}:00${tz}`).getTime();
-  } else {
-    // formato SEM timezone (assume horário local BR)
-    return new Date(year, month-1, day, hour, min).getTime();
-  }
+  return utc - (3 * 60 * 60 * 1000); // ajuste Brasil
 }
 
 function calc(start,stop){
@@ -248,7 +245,7 @@ function hora(t){
          d.getMinutes().toString().padStart(2,"0");
 }
 
-/* ===== RENDER ===== */
+/* RENDER */
 function carregarEPG(xml){
 
 const progs = [...xml.querySelectorAll("programme")];
@@ -260,17 +257,14 @@ canais.forEach(c=>{
 
 let now = Date.now();
 
-/* SUPORTE MULTI ID */
-const ids = Array.isArray(c.id) ? c.id : [c.id];
-
 let atual = progs.find(p =>
-ids.includes(p.getAttribute("channel")) &&
+p.getAttribute("channel")==c.id &&
 parseDate(p.getAttribute("start")) <= now &&
 parseDate(p.getAttribute("stop")) >= now
 );
 
 let prox = progs.find(p =>
-ids.includes(p.getAttribute("channel")) &&
+p.getAttribute("channel")==c.id &&
 parseDate(p.getAttribute("start")) > now
 );
 
@@ -308,25 +302,19 @@ ${titulo}
 });
 }
 
-/* ===== ATUALIZAÇÃO (SEM CACHE) ===== */
+/* ATUALIZAÇÃO */
 function atualizar(){
-
-const url = EPG_URL + "?_=" + Date.now();
-
-fetch(url, {
-  cache: "no-store"
-})
+fetch(EPG_URL)
 .then(r=>r.text())
 .then(str=>new DOMParser().parseFromString(str,"text/xml"))
 .then(xml=>carregarEPG(xml))
 .catch(err=>console.log("Erro EPG", err));
-
 }
 
 atualizar();
 setInterval(atualizar, 60000);
 
-/* ===== CARROSSEL ===== */
+/* CARROSSEL LOOP */
 let index = 0;
 
 setInterval(()=>{
